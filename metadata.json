@@ -1,0 +1,6 @@
+{
+  "name": "Teacher Lecture Report Dashboard",
+  "description": "Academic lecture tracking and report analysis dashboard with subject and teacher filters, interactive lecture matrix, and spreadsheet import.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
