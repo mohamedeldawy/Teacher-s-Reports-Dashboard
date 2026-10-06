@@ -1,4 +1,4 @@
-export type LectureStatus = 'completed' | 'pending' | 'issue' | 'cancelled';
+export type LectureStatus = 'completed' | 'pending' | 'issue';
 
 export interface LectureReport {
   lectureId: string; // e.g. "L1", "L2"

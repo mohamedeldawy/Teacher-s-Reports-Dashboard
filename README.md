@@ -8,6 +8,8 @@ The initial dashboard data is a snapshot of all 11 tabs in the [teacher reports 
 
 Use **Sync Sheet** to fetch the latest data from all 11 tabs. The existing `Report` cell can contain either a Google Drive share URL or regular notes: Drive URLs open in the lecture preview, while plain text appears as the report note. Files must be accessible to the dashboard user. Imported data and dashboard edits are saved in this browser; **Reset** restores the bundled snapshot.
 
+Subject, grade, teacher, and status filters each include an option search. Empty report cells remain blank, and the summary cards include an attention count that filters the dashboard to lectures needing follow-up.
+
 ## Why GitHub Shows Source Code (And How to Publish the Live App)
 
 When you sync Google AI Studio with GitHub, GitHub stores the **source code files** (`.tsx`, `.ts`, `package.json`, `index.html`). GitHub does not automatically run web servers or execute Node/React apps on its repository page.

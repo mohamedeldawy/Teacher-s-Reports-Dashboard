@@ -148,31 +148,25 @@ export function detectLectureStatus(note: string): LectureStatus {
 
   const lower = trimmed.toLowerCase();
   if (
+    lower.includes('مشكلة') ||
+    lower.includes('لم يحضر') ||
+    lower.includes('غياب') ||
+    lower.includes('عطل') ||
+    lower.includes('issue') ||
+    lower.includes('alert') ||
     lower.includes('تأجيل') ||
     lower.includes('ملغية') ||
     lower.includes('اعتذار') ||
     lower.includes('canceled') ||
     lower.includes('cancelled')
   ) {
-    return 'cancelled';
-  }
-
-  if (
-    lower.includes('مشكلة') ||
-    lower.includes('لم يحضر') ||
-    lower.includes('غياب') ||
-    lower.includes('عطل') ||
-    lower.includes('issue') ||
-    lower.includes('alert')
-  ) {
     return 'issue';
   }
-
   return 'completed';
 }
 
-export function hasLectureReport(lecture: Pick<LectureReport, 'note' | 'fileUrl' | 'status'>): boolean {
-  return lecture.status === 'completed' || Boolean(lecture.note.trim() || lecture.fileUrl?.trim());
+export function hasLectureReport(lecture: Pick<LectureReport, 'note' | 'fileUrl'>): boolean {
+  return Boolean(lecture.note.trim() || lecture.fileUrl?.trim());
 }
 
 /**

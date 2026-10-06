@@ -1,6 +1,14 @@
 import React from 'react';
-import { Search, Filter, X, LayoutGrid, Table, Activity, ChevronDown } from 'lucide-react';
+import { Search, X, LayoutGrid, Table, Activity } from 'lucide-react';
 import { FilterState } from '../types';
+import { SearchableFilter } from './SearchableFilter';
+
+const STATUS_FILTER_OPTIONS = [
+  'all',
+  'Updated / Has Report (Completed)',
+  'Pending Report',
+  'Has Issue / Needs Follow-up',
+];
 
 interface FiltersBarProps {
   filters: FilterState;
@@ -38,43 +46,8 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-4 mb-6">
-      {/* Top row: Subject Quick Pills & View Switcher */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1.5 flex items-center gap-1 shrink-0">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            Subject:
-          </span>
-          <button
-            id="filter-subject-all"
-            onClick={() => onChangeFilters({ subject: 'all', teacher: 'all' })}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 cursor-pointer ${
-              filters.subject === 'all'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            All Subjects
-          </button>
-          {availableSubjects.map(subj => {
-            const isSelected = filters.subject === subj;
-            return (
-              <button
-                key={subj}
-                id={`filter-subject-${subj.toLowerCase().replace(/\s+/g, '-')}`}
-                onClick={() => onChangeFilters({ subject: isSelected ? 'all' : subj, teacher: 'all' })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 cursor-pointer ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                {subj}
-              </button>
-            );
-          })}
-        </div>
-
+      {/* View Mode Switcher */}
+      <div className="flex justify-end pb-3 border-b border-slate-100">
         {/* View Mode Switcher */}
         <div className="flex items-center bg-slate-100 p-1 rounded-lg shrink-0 self-start md:self-auto">
           <button
@@ -117,7 +90,15 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
       </div>
 
       {/* Bottom row: Detailed Dropdown Filters & Search */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-3">
+        <SearchableFilter
+          id="filter-subject-select"
+          label="All Subjects"
+          value={filters.subject}
+          options={['all', ...availableSubjects]}
+          onChange={subject => onChangeFilters({ subject, teacher: 'all' })}
+        />
+
         {/* Search */}
         <div className="relative lg:col-span-2">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -139,59 +120,45 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
           )}
         </div>
 
-        {/* Grade Filter */}
-        <div className="relative">
-          <select
-            id="filter-grade-select"
-            value={filters.grade}
-            onChange={e => onChangeFilters({ grade: e.target.value })}
-            className="w-full appearance-none px-3 py-2 rounded-lg text-xs bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition pr-8 cursor-pointer"
-          >
-            <option value="all">All Grades / Stages</option>
-            {availableGrades.map(g => (
-              <option key={g} value={g}>
-                {g}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
+        <SearchableFilter
+          id="filter-grade-select"
+          label="All Grades / Stages"
+          value={filters.grade}
+          options={['all', ...availableGrades]}
+          onChange={grade => onChangeFilters({ grade })}
+        />
 
-        {/* Teacher Dynamic Filter */}
-        <div className="relative">
-          <select
-            id="filter-teacher-select"
-            value={filters.teacher}
-            onChange={e => onChangeFilters({ teacher: e.target.value })}
-            className="w-full appearance-none px-3 py-2 rounded-lg text-xs bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition pr-8 cursor-pointer font-medium"
-          >
-            <option value="all">
-              {filters.subject !== 'all' ? `All Teachers (${filters.subject})` : 'All Teachers'}
-            </option>
-            {availableTeachers.map(t => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
+        <SearchableFilter
+          id="filter-teacher-select"
+          label={filters.subject !== 'all' ? `All Teachers (${filters.subject})` : 'All Teachers'}
+          value={filters.teacher}
+          options={['all', ...availableTeachers]}
+          onChange={teacher => onChangeFilters({ teacher })}
+        />
 
-        {/* Status Filter */}
-        <div className="relative">
-          <select
-            id="filter-status-select"
-            value={filters.status}
-            onChange={e => onChangeFilters({ status: e.target.value as FilterState['status'] })}
-            className="w-full appearance-none px-3 py-2 rounded-lg text-xs bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition pr-8 cursor-pointer"
-          >
-            <option value="all">All Lecture Statuses</option>
-            <option value="has_report">Updated / Has Report (Completed)</option>
-            <option value="pending">Pending Report</option>
-            <option value="issue">Has Issue / Needs Follow-up</option>
-          </select>
-          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
+        <SearchableFilter
+          id="filter-status-select"
+          label="All Lecture Statuses"
+          value={
+            filters.status === 'has_report'
+              ? 'Updated / Has Report (Completed)'
+              : filters.status === 'pending'
+                ? 'Pending Report'
+                : filters.status === 'issue'
+                  ? 'Has Issue / Needs Follow-up'
+                  : 'all'
+          }
+          options={STATUS_FILTER_OPTIONS}
+          onChange={status => {
+            const statusValues: Record<string, FilterState['status']> = {
+              'All Lecture Statuses': 'all',
+              'Updated / Has Report (Completed)': 'has_report',
+              'Pending Report': 'pending',
+              'Has Issue / Needs Follow-up': 'issue',
+            };
+            onChangeFilters({ status: statusValues[status] || 'all' });
+          }}
+        />
       </div>
 
       {/* Active filters badge row */}
