@@ -86,18 +86,28 @@ export const LectureModal: React.FC<LectureModalProps> = ({
         <div className="p-5 space-y-4">
           {fileUrl && (
             <section className="rounded-xl border border-slate-200 overflow-hidden">
-              <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-2 text-xs font-semibold text-slate-700">
+              <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700">
                 <FileText className="w-4 h-4 text-emerald-600" />
                 Report file
                 {fileUrl && filePreviewUrl && (
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="ml-auto font-medium text-emerald-700 hover:text-emerald-800"
-                  >
-                    Open in Drive
-                  </a>
+                  <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <a
+                      href={filePreviewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-emerald-700 hover:text-emerald-800"
+                    >
+                      Open full-screen preview
+                    </a>
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-slate-600 hover:text-slate-800"
+                    >
+                      Open in Drive
+                    </a>
+                  </div>
                 )}
                 {!filePreviewUrl && (
                   <span className="font-normal text-amber-700">
@@ -109,8 +119,10 @@ export const LectureModal: React.FC<LectureModalProps> = ({
                 <iframe
                   src={filePreviewUrl}
                   title={`${course.teacher} ${lectureId} report file`}
-                  className="w-full h-[min(65vh,720px)] bg-slate-100"
+                  className="block w-full h-[65vh] min-h-[360px] max-h-[720px] bg-slate-100"
                   allow="autoplay"
+                  allowFullScreen
+                  loading="eager"
                 />
               )}
             </section>
