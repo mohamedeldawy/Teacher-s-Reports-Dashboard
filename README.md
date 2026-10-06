@@ -1,6 +1,6 @@
-# Teacher Lecture Report Dashboard
+# Elkheta Teacher's Reports
 
-An academic lecture tracking and report analysis dashboard for managing and visualizing teacher lecture updates, grade levels, and spreadsheet reports.
+Elkheta's teacher lecture report dashboard for managing and visualizing teacher updates, grade levels, and spreadsheet reports.
 
 ## Dashboard data
 

@@ -1,6 +1,6 @@
 {
-  "name": "Teacher Lecture Report Dashboard",
-  "description": "Academic lecture tracking and report analysis dashboard with subject and teacher filters, interactive lecture matrix, and spreadsheet import.",
+  "name": "Elkheta Teacher's Reports",
+  "description": "Elkheta's teacher lecture reports dashboard for tracking teacher updates by subject and grade.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
