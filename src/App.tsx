@@ -8,11 +8,17 @@ import { RecentUpdatesFeed } from './components/RecentUpdatesFeed';
 import { LectureModal } from './components/LectureModal';
 import { ImportModal } from './components/ImportModal';
 import { TeacherCourse, FilterState, LectureStatus, LectureReport } from './types';
-import { parseSpreadsheet, exportCoursesToCsv } from './utils/parser';
-import { INITIAL_SPREADSHEET_CSV } from './data/initialData';
+import {
+  getGoogleDrivePreviewUrl,
+  hasLectureReport,
+  parseSpreadsheet,
+  parseSpreadsheetTabs,
+  exportCoursesToCsv,
+} from './utils/parser';
+import { GOOGLE_SHEET_ID, INITIAL_SPREADSHEETS } from './data/initialData';
 import { CheckCircle2, AlertCircle, Info, BookOpen } from 'lucide-react';
 
-const STORAGE_KEY = 'academic_teacher_lecture_reports_v2';
+const STORAGE_KEY = 'academic_teacher_lecture_reports_v4';
 
 export default function App() {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
@@ -33,6 +39,7 @@ export default function App() {
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isRefreshingSheet, setIsRefreshingSheet] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -45,13 +52,24 @@ export default function App() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      const csvToLoad = stored && stored.trim().length > 0 ? stored : INITIAL_SPREADSHEET_CSV;
-      const { courses: parsedCourses, allLectureIds } = parseSpreadsheet(csvToLoad);
-      setCourses(parsedCourses);
+      if (stored) {
+        const savedData = JSON.parse(stored) as {
+          courses?: TeacherCourse[];
+          allLectureIds?: string[];
+        };
+        if (Array.isArray(savedData.courses) && Array.isArray(savedData.allLectureIds)) {
+          setCourses(savedData.courses);
+          setLectureList(savedData.allLectureIds);
+          return;
+        }
+      }
+
+      const { courses: initialCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
+      setCourses(initialCourses);
       setLectureList(allLectureIds);
     } catch (e) {
       console.error('Error loading initial data:', e);
-      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheet(INITIAL_SPREADSHEET_CSV);
+      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
       setCourses(fallbackCourses);
       setLectureList(allLectureIds);
     }
@@ -61,8 +79,10 @@ export default function App() {
   const saveCoursesToStorage = (updatedCourses: TeacherCourse[]) => {
     setCourses(updatedCourses);
     try {
-      const csv = exportCoursesToCsv(updatedCourses, lectureList);
-      localStorage.setItem(STORAGE_KEY, csv);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        courses: updatedCourses,
+        allLectureIds: lectureList,
+      }));
     } catch (e) {
       console.error('Error saving to storage:', e);
     }
@@ -125,13 +145,11 @@ export default function App() {
 
       // 4. Status filter
       if (filters.status === 'has_report') {
-        const hasAnyReport = (Object.values(c.lectures) as LectureReport[]).some(
-          l => l.status === 'completed' || (l.note && l.note.trim().length > 0)
-        );
+        const hasAnyReport = (Object.values(c.lectures) as LectureReport[]).some(hasLectureReport);
         if (!hasAnyReport) return false;
       } else if (filters.status === 'pending') {
         const hasAnyPending = (Object.values(c.lectures) as LectureReport[]).some(
-          l => l.status === 'pending' || !l.note || l.note.trim().length === 0
+          l => l.status === 'pending' && !l.note.trim() && !l.fileUrl?.trim()
         );
         if (!hasAnyPending) return false;
       } else if (filters.status === 'issue') {
@@ -147,7 +165,7 @@ export default function App() {
         const matchesGrade = c.grade.toLowerCase().includes(query);
         const matchesRaw = c.rawHeader.toLowerCase().includes(query);
         const matchesNote = (Object.values(c.lectures) as LectureReport[]).some(
-          l => l.note && l.note.toLowerCase().includes(query)
+          l => l.note.toLowerCase().includes(query) || Boolean(l.fileUrl?.toLowerCase().includes(query))
         );
 
         if (!matchesTeacher && !matchesSubject && !matchesGrade && !matchesRaw && !matchesNote) {
@@ -170,18 +188,18 @@ export default function App() {
       if (course.id !== courseId) return course;
 
       const updatedLectures = { ...course.lectures };
+      const fileUrl = getGoogleDrivePreviewUrl(note) ? note : undefined;
       updatedLectures[lectureId] = {
         lectureId,
-        note,
-        status,
+        note: fileUrl ? '' : note,
+        status: fileUrl ? 'completed' : status,
+        fileUrl,
         timestamp: note ? 'Just updated' : undefined,
       };
 
       const lectureEntries = Object.values(updatedLectures) as LectureReport[];
       const total = lectureEntries.length;
-      const completed = lectureEntries.filter(
-        l => l.status === 'completed' || (l.note && l.note.trim().length > 0)
-      ).length;
+      const completed = lectureEntries.filter(hasLectureReport).length;
 
       return {
         ...course,
@@ -203,7 +221,10 @@ export default function App() {
       if (parsedCourses.length > 0) {
         setCourses(parsedCourses);
         setLectureList(allLectureIds);
-        localStorage.setItem(STORAGE_KEY, csvText);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          courses: parsedCourses,
+          allLectureIds,
+        }));
         showToast(`Successfully imported ${parsedCourses.length} teacher sections!`);
       }
     } catch (e) {
@@ -235,7 +256,7 @@ export default function App() {
   const handleResetData = () => {
     if (window.confirm('Reset all lecture reports back to the current Google Sheet snapshot?')) {
       localStorage.removeItem(STORAGE_KEY);
-      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheet(INITIAL_SPREADSHEET_CSV);
+      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
       setCourses(fallbackCourses);
       setLectureList(allLectureIds);
       setFilters({
@@ -247,6 +268,64 @@ export default function App() {
         viewMode: 'report_matrix',
       });
       showToast('Reset dashboard to the current Google Sheet snapshot');
+    }
+  };
+
+  const handleRestoreCurrentSheetData = () => {
+    const { courses: initialCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
+    setCourses(initialCourses);
+    setLectureList(allLectureIds);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        courses: initialCourses,
+        allLectureIds,
+      }));
+    } catch (e) {
+      console.error('Error restoring sheet data:', e);
+      showToast('Could not save the current sheet data in this browser.');
+      return;
+    }
+    showToast(`Loaded ${initialCourses.length} sections from ${INITIAL_SPREADSHEETS.length} sheet tabs.`);
+  };
+
+  const handleRefreshSheetData = async () => {
+    setIsRefreshingSheet(true);
+    try {
+      const tabs = await Promise.all(INITIAL_SPREADSHEETS.map(async ({ name }) => {
+        const url = new URL(`https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq`);
+        url.searchParams.set('tqx', 'out:csv');
+        url.searchParams.set('sheet', name);
+        const response = await fetch(url, { cache: 'no-store' });
+        const contentType = response.headers.get('content-type') || '';
+        if (!response.ok || !contentType.includes('text/csv')) {
+          throw new Error(`Could not load "${name}" tab (HTTP ${response.status}).`);
+        }
+        return { name, csv: await response.text() };
+      }));
+      const { courses: latestCourses, allLectureIds } = parseSpreadsheetTabs(tabs);
+      if (latestCourses.length === 0) {
+        throw new Error('No teacher sections were found in the Google Sheet.');
+      }
+
+      setCourses(latestCourses);
+      setLectureList(allLectureIds);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          courses: latestCourses,
+          allLectureIds,
+        }));
+      } catch (error) {
+        console.error('Could not save refreshed sheet data in this browser:', error);
+        showToast('Sheet refreshed, but browser storage could not be updated.');
+        return;
+      }
+
+      showToast(`Synced ${latestCourses.length} sections from ${tabs.length} sheet tabs.`);
+    } catch (error) {
+      console.error('Could not refresh Google Sheet data:', error);
+      showToast(error instanceof Error ? `Sheet sync failed: ${error.message}` : 'Sheet sync failed.');
+    } finally {
+      setIsRefreshingSheet(false);
     }
   };
 
@@ -263,6 +342,8 @@ export default function App() {
         onOpenImport={() => setIsImportOpen(true)}
         onExportCsv={handleExportCsv}
         onResetData={handleResetData}
+        onRefreshSheet={handleRefreshSheetData}
+        isRefreshingSheet={isRefreshingSheet}
         totalSections={courses.length}
         totalSubjects={availableSubjects.length}
       />
@@ -331,6 +412,7 @@ export default function App() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onApplyData={handleApplySpreadsheetData}
+        onApplyCurrentData={handleRestoreCurrentSheetData}
       />
 
       {/* Floating Toast Notification */}

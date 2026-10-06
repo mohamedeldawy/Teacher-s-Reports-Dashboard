@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Clock, AlertTriangle, XCircle, Plus, Eye, User, Sparkles } from 'lucide-react';
 import { TeacherCourse, LectureReport } from '../types';
-import { isArabic } from '../utils/parser';
+import { hasLectureReport, isArabic } from '../utils/parser';
 
 interface ReportMatrixViewProps {
   courses: TeacherCourse[];
@@ -150,8 +150,8 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                   {/* Lecture Columns L1...L15 */}
                   {lectureList.map(lecId => {
                     const lectureReport: LectureReport | undefined = course.lectures[lecId];
-                    const hasNote = Boolean(lectureReport && lectureReport.note && lectureReport.note.trim().length > 0);
-                    const noteText = lectureReport?.note?.trim() || '';
+                    const hasNote = Boolean(lectureReport && hasLectureReport(lectureReport));
+                    const noteText = lectureReport?.note?.trim() || (lectureReport?.fileUrl ? 'View report file' : '');
                     const isNoteArabic = isArabic(noteText);
                     const status = lectureReport?.status || (hasNote ? 'completed' : 'pending');
 

@@ -61,6 +61,21 @@ export function parseHeaderCode(header: string): {
     if (rawSubj.startsWith('sci')) {
       subjectCategory = 'Science';
       subject = lang.includes('en') ? 'Science (English)' : 'Science (Arabic)';
+    } else if (rawSubj === 'ss') {
+      subjectCategory = 'Social Studies';
+      subject = 'Social Studies';
+    } else if (rawSubj === 'phl' || rawSubj === 'phil') {
+      subjectCategory = 'Philosophy';
+      subject = 'Philosophy';
+    } else if (rawSubj === 'hx' || rawSubj.startsWith('hist')) {
+      subjectCategory = 'History';
+      subject = 'History';
+    } else if (rawSubj === 'phy') {
+      subjectCategory = 'Physics';
+      subject = 'Physics';
+    } else if (rawSubj === 'isc' || rawSubj.startsWith('integrated')) {
+      subjectCategory = 'Integrated Science';
+      subject = 'Integrated Science';
     } else if (rawSubj.startsWith('math')) {
       subjectCategory = 'Math';
       subject = lang.includes('en') ? 'Math (English)' : 'Math (Arabic)';
@@ -83,6 +98,21 @@ export function parseHeaderCode(header: string): {
     if (rawSubj.startsWith('sci')) {
       subjectCategory = 'Science';
       subject = 'Science';
+    } else if (rawSubj === 'ss') {
+      subjectCategory = 'Social Studies';
+      subject = 'Social Studies';
+    } else if (rawSubj === 'phl' || rawSubj === 'phil') {
+      subjectCategory = 'Philosophy';
+      subject = 'Philosophy';
+    } else if (rawSubj === 'hx' || rawSubj.startsWith('hist')) {
+      subjectCategory = 'History';
+      subject = 'History';
+    } else if (rawSubj === 'phy') {
+      subjectCategory = 'Physics';
+      subject = 'Physics';
+    } else if (rawSubj === 'isc' || rawSubj.startsWith('integrated')) {
+      subjectCategory = 'Integrated Science';
+      subject = 'Integrated Science';
     } else if (rawSubj.startsWith('math')) {
       subjectCategory = 'Math';
       subject = 'Math';
@@ -141,6 +171,10 @@ export function detectLectureStatus(note: string): LectureStatus {
   return 'completed';
 }
 
+export function hasLectureReport(lecture: Pick<LectureReport, 'note' | 'fileUrl' | 'status'>): boolean {
+  return lecture.status === 'completed' || Boolean(lecture.note.trim() || lecture.fileUrl?.trim());
+}
+
 /**
  * Split CSV lines taking quotes into account
  */
@@ -167,13 +201,43 @@ function parseCsvLine(line: string): string[] {
     }
   }
   result.push(current);
-  return result.map(c => c.trim());
+  const cells = result.map(c => c.trim());
+  while (cells.length > 0 && !cells[cells.length - 1]) cells.pop();
+  return cells;
 }
 
 function normalizeLectureId(value: string): string {
   const normalized = value.trim();
   const match = normalized.match(/^(?:lecture|lec|l)\s*(\d+)$/i);
-  return match ? `L${Number(match[1])}` : normalized.toUpperCase();
+  return match ? `L${Number(match[1])}` : normalized;
+}
+
+function sortLectureIds(a: string, b: string): number {
+  const numberA = a.match(/^L(\d+)$/i)?.[1];
+  const numberB = b.match(/^L(\d+)$/i)?.[1];
+  if (numberA && numberB) return Number(numberA) - Number(numberB);
+  if (numberA) return -1;
+  if (numberB) return 1;
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+export function getGoogleDrivePreviewUrl(fileUrl: string): string | null {
+  try {
+    const url = new URL(fileUrl);
+    if (
+      url.protocol !== 'https:' ||
+      (url.hostname !== 'drive.google.com' && url.hostname !== 'docs.google.com')
+    ) {
+      return null;
+    }
+
+    const fileId = url.pathname.match(/\/d\/([^/]+)/)?.[1] || url.searchParams.get('id');
+    return fileId
+      ? `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function isHeaderRow(cells: string[]): boolean {
@@ -181,24 +245,39 @@ function isHeaderRow(cells: string[]): boolean {
   return firstCell === 'lectures' || firstCell === 'lecture' || firstCell === 'حصة';
 }
 
-function isTeacherGradeReportHeader(cells: string[]): boolean {
-  if (cells.length < 4 || cells.length % 4 !== 0) return false;
+function getTeacherGradeReportGroupWidth(cells: string[]): number | null {
+  for (const groupWidth of [5, 4]) {
+    if (cells.length < groupWidth || cells.length % groupWidth !== 0) continue;
 
-  for (let i = 0; i < cells.length; i += 4) {
-    if (
-      cells[i]?.trim().toLowerCase() !== 'lectures' ||
-      cells[i + 1]?.trim().toLowerCase() !== 'teacher' ||
-      cells[i + 2]?.trim().toLowerCase() !== 'grade' ||
-      cells[i + 3]?.trim().toLowerCase() !== 'report'
-    ) {
-      return false;
+    let matchesHeader = true;
+    for (let i = 0; i < cells.length; i += groupWidth) {
+      const hasExpectedColumns =
+        cells[i]?.trim().toLowerCase() === 'lectures' &&
+        cells[i + 1]?.trim().toLowerCase() === 'teacher' &&
+        cells[i + 2]?.trim().toLowerCase() === 'grade' &&
+        cells[i + 3]?.trim().toLowerCase() === 'report';
+      const hasFileUrlColumn = groupWidth === 4 ||
+        ['file url', 'file link', 'report url', 'url', 'link'].includes(
+          cells[i + 4]?.trim().toLowerCase()
+        );
+
+      if (!hasExpectedColumns || !hasFileUrlColumn) {
+        matchesHeader = false;
+        break;
+      }
     }
+
+    if (matchesHeader) return groupWidth;
   }
 
-  return true;
+  return null;
 }
 
-function parseTeacherGradeReportSheet(rows: string[][]): {
+function isTeacherGradeReportHeader(cells: string[]): boolean {
+  return getTeacherGradeReportGroupWidth(cells) !== null;
+}
+
+function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
   courses: TeacherCourse[];
   allLectureIds: string[];
 } {
@@ -208,15 +287,14 @@ function parseTeacherGradeReportSheet(rows: string[][]): {
 
   for (const row of rows) {
     if (isTeacherGradeReportHeader(row)) {
-      activeCourses = new Array<TeacherCourse | undefined>(row.length / 4);
+      activeCourses = new Array<TeacherCourse | undefined>(row.length / groupWidth);
       continue;
     }
 
-    for (let column = 0, group = 0; column < row.length; column += 4, group++) {
+    for (let column = 0, group = 0; column < row.length; column += groupWidth, group++) {
       const rawLectureId = row[column]?.trim() || '';
       if (!rawLectureId) continue;
       const lectureId = normalizeLectureId(rawLectureId);
-      if (!/^L\d+$/i.test(lectureId)) continue;
 
       lectureSet.add(lectureId);
 
@@ -246,11 +324,15 @@ function parseTeacherGradeReportSheet(rows: string[][]): {
       }
       activeCourses[group] = course;
 
-      const note = row[column + 3]?.trim() || '';
+      const reportValue = row[column + 3]?.trim() || '';
+      const reportUrl = getGoogleDrivePreviewUrl(reportValue) ? reportValue : '';
+      const note = reportUrl ? '' : reportValue;
+      const fileUrl = reportUrl || (groupWidth === 5 ? row[column + 4]?.trim() || '' : '');
       course.lectures[lectureId] = {
         lectureId,
         note,
-        status: detectLectureStatus(note),
+        status: fileUrl ? 'completed' : detectLectureStatus(note),
+        fileUrl: fileUrl || undefined,
         timestamp: note ? 'Recently submitted' : undefined,
       };
     }
@@ -259,9 +341,7 @@ function parseTeacherGradeReportSheet(rows: string[][]): {
   const courses = Array.from(courseMap.values()).map(course => {
     const lectureEntries = Object.values(course.lectures);
     const total = lectureEntries.length;
-    const completed = lectureEntries.filter(
-      lecture => lecture.status === 'completed' || (lecture.note && lecture.note.trim().length > 0)
-    ).length;
+    const completed = lectureEntries.filter(hasLectureReport).length;
 
     return {
       ...course,
@@ -271,11 +351,7 @@ function parseTeacherGradeReportSheet(rows: string[][]): {
     };
   });
 
-  const allLectureIds = Array.from(lectureSet).sort((a, b) => {
-    const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
-    const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
-    return numA - numB;
-  });
+  const allLectureIds = Array.from(lectureSet).sort(sortLectureIds);
 
   return { courses, allLectureIds };
 }
@@ -297,8 +373,9 @@ export function parseSpreadsheet(csvRaw: string): {
   }
 
   const rows = rawLines.map(parseCsvLine);
-  if (rows.some(isTeacherGradeReportHeader)) {
-    return parseTeacherGradeReportSheet(rows);
+  const groupWidth = rows.map(getTeacherGradeReportGroupWidth).find(width => width !== null);
+  if (groupWidth) {
+    return parseTeacherGradeReportSheet(rows, groupWidth);
   }
 
   // Find all block starts by matching the header label, not lecture data rows.
@@ -402,16 +479,52 @@ export function parseSpreadsheet(csvRaw: string): {
   });
 
   // Sort lecture IDs naturally: L1, L2, L3, ... L10, L11, etc.
-  const sortedLectures = Array.from(lectureSet).sort((a, b) => {
-    const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
-    const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
-    return numA - numB;
-  });
+  const sortedLectures = Array.from(lectureSet).sort(sortLectureIds);
 
   // Default to L1..L15 if none found
   const allLectureIds = sortedLectures.length > 0 
     ? sortedLectures 
     : Array.from({ length: 15 }, (_, i) => `L${i + 1}`);
+
+  return { courses, allLectureIds };
+}
+
+export function parseSpreadsheetTabs(
+  tabs: ReadonlyArray<{ name: string; csv: string }>
+): {
+  courses: TeacherCourse[];
+  allLectureIds: string[];
+} {
+  const courses: TeacherCourse[] = [];
+  const lectureSet = new Set<string>();
+
+  for (const tab of tabs) {
+    const result = parseSpreadsheet(tab.csv);
+    const normalizedTab = tab.name.trim().toLowerCase();
+    const tabSubject = normalizedTab === 'science-en'
+      ? { subject: 'Science (English)', category: 'Science (English)' }
+      : normalizedTab === 'science-ar'
+        ? { subject: 'Science (Arabic)', category: 'Science (Arabic)' }
+        : normalizedTab === 'math-en'
+          ? { subject: 'Math (English)', category: 'Math (English)' }
+          : normalizedTab === 'math-ar'
+            ? { subject: 'Math (Arabic)', category: 'Math (Arabic)' }
+            : normalizedTab === 'social-studies'
+              ? { subject: 'Social Studies', category: 'Social Studies' }
+              : normalizedTab === 'integrated science'
+                ? { subject: 'Integrated Science', category: 'Integrated Science' }
+                : undefined;
+
+    for (const lectureId of result.allLectureIds) lectureSet.add(lectureId);
+    courses.push(...result.courses.map(course => ({
+      ...course,
+      id: `${tab.name}::${course.id}`,
+      subject: tabSubject?.subject ?? course.subject,
+      subjectCategory: tabSubject?.category ?? course.subjectCategory,
+    })));
+  }
+
+  const allLectureIds = Array.from(lectureSet).sort(sortLectureIds);
 
   return { courses, allLectureIds };
 }
@@ -422,7 +535,7 @@ export function parseSpreadsheet(csvRaw: string): {
 export function exportCoursesToCsv(courses: TeacherCourse[], lectureList: string[]): string {
   if (courses.length === 0) return '';
 
-  // Keep teacher and grade metadata explicit so imported edits survive reloads.
+  // The Report cell contains either a Drive URL or the plain-text report.
   const headerParts: string[] = [];
   courses.forEach(() => {
     headerParts.push('Lectures', 'Teacher', 'Grade', 'Report');
@@ -433,9 +546,15 @@ export function exportCoursesToCsv(courses: TeacherCourse[], lectureList: string
   lectureList.forEach(lecId => {
     const rowParts: string[] = [];
     courses.forEach(c => {
-      rowParts.push(lecId, `"${c.rawHeader.replace(/"/g, '""')}"`, `"${c.grade.replace(/"/g, '""')}"`);
+      rowParts.push(
+        lecId,
+        `"${c.rawHeader.replace(/"/g, '""')}"`,
+        `"${c.grade.replace(/"/g, '""')}"`,
+      );
       const note = c.lectures[lecId]?.note || '';
-      rowParts.push(note ? `"${note.replace(/"/g, '""')}"` : '');
+      const fileUrl = c.lectures[lecId]?.fileUrl || '';
+      const reportValue = fileUrl || note;
+      rowParts.push(reportValue ? `"${reportValue.replace(/"/g, '""')}"` : '');
     });
     lines.push(rowParts.join(','));
   });

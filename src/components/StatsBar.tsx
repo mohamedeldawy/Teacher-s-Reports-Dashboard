@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Users, CheckCircle2, Clock, AlertTriangle, TrendingUp } from 'lucide-react';
 import { TeacherCourse, LectureReport } from '../types';
+import { hasLectureReport } from '../utils/parser';
 
 interface StatsBarProps {
   courses: TeacherCourse[];
@@ -24,7 +25,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
     const lectureList = Object.values(course.lectures) as LectureReport[];
     totalLectures += lectureList.length;
     lectureList.forEach(l => {
-      if (l.status === 'completed' || (l.note && l.note.trim().length > 0)) {
+      if (hasLectureReport(l)) {
         completedLectures++;
       }
       if (l.status === 'issue') {
