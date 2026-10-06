@@ -4,6 +4,7 @@ export interface LectureReport {
   lectureId: string; // e.g. "L1", "L2"
   note: string;
   status: LectureStatus;
+  fileUrl?: string;
   timestamp?: string;
   updatedBy?: string;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Activity, CheckCircle2, AlertTriangle, MessageSquare, Clock, User, ArrowRight } from 'lucide-react';
 import { TeacherCourse, LectureReport } from '../types';
-import { isArabic } from '../utils/parser';
+import { hasLectureReport, isArabic } from '../utils/parser';
 
 interface RecentUpdatesFeedProps {
   courses: TeacherCourse[];
@@ -23,11 +23,11 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
 
   courses.forEach(course => {
     (Object.values(course.lectures) as LectureReport[]).forEach(lecture => {
-      if (lecture.note && lecture.note.trim().length > 0) {
+      if (hasLectureReport(lecture)) {
         updates.push({
           course,
           lectureId: lecture.lectureId,
-          note: lecture.note,
+          note: lecture.note || (lecture.fileUrl ? 'View report file' : ''),
           status: lecture.status,
           timestamp: lecture.timestamp || 'Recorded in Sheet',
         });

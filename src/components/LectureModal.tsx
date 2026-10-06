@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Clock, AlertTriangle, XCircle, Sparkles, MessageSquare, Trash2 } from 'lucide-react';
-import { TeacherCourse, LectureReport, LectureStatus } from '../types';
-import { isArabic } from '../utils/parser';
+import { X, CheckCircle2, Clock, AlertTriangle, XCircle, Sparkles, MessageSquare, Trash2, FileText } from 'lucide-react';
+import { TeacherCourse, LectureStatus } from '../types';
+import { getGoogleDrivePreviewUrl, isArabic } from '../utils/parser';
 
 interface LectureModalProps {
   isOpen: boolean;
@@ -35,8 +35,8 @@ export const LectureModal: React.FC<LectureModalProps> = ({
     if (course && lectureId) {
       const existing = course.lectures[lectureId];
       if (existing) {
-        setNote(existing.note || '');
-        setStatus(existing.status || (existing.note ? 'completed' : 'pending'));
+        setNote(existing.note || existing.fileUrl || '');
+        setStatus(existing.status || (existing.note || existing.fileUrl ? 'completed' : 'pending'));
       } else {
         setNote('');
         setStatus('pending');
@@ -47,6 +47,9 @@ export const LectureModal: React.FC<LectureModalProps> = ({
   if (!isOpen || !course || !lectureId) return null;
 
   const isNoteArabic = isArabic(note);
+  const fileUrl = course.lectures[lectureId]?.fileUrl;
+  const filePreviewUrl = fileUrl ? getGoogleDrivePreviewUrl(fileUrl) : null;
+  const isReportFile = /\.(pdf|pptx?|docx?|xlsx?|jpe?g|png|gif)$/i.test(note.trim());
 
   const handleSave = () => {
     onSaveLecture(course.id, lectureId, note.trim(), status);
@@ -63,7 +66,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
       <div
-        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all"
+        className={`bg-white rounded-2xl ${filePreviewUrl ? 'max-w-5xl' : 'max-w-lg'} w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all`}
         onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -93,6 +96,38 @@ export const LectureModal: React.FC<LectureModalProps> = ({
 
         {/* Modal Content */}
         <div className="p-5 space-y-4">
+          {(fileUrl || isReportFile) && (
+            <section className="rounded-xl border border-slate-200 overflow-hidden">
+              <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <FileText className="w-4 h-4 text-emerald-600" />
+                Report file
+                {fileUrl && filePreviewUrl && (
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-auto font-medium text-emerald-700 hover:text-emerald-800"
+                  >
+                    Open in Drive
+                  </a>
+                )}
+                {!filePreviewUrl && (
+                  <span className="font-normal text-amber-700">
+                    Paste a shareable Google Drive URL in the Report cell to preview this file.
+                  </span>
+                )}
+              </div>
+              {filePreviewUrl && (
+                <iframe
+                  src={filePreviewUrl}
+                  title={`${course.teacher} ${lectureId} report file`}
+                  className="w-full h-[min(65vh,720px)] bg-slate-100"
+                  allow="autoplay"
+                />
+              )}
+            </section>
+          )}
+
           {/* Status Selection */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-2">
@@ -158,7 +193,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
                 <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
-                <span>Report Note / Lecture Update:</span>
+                <span>Report URL or Note:</span>
               </label>
               <span className="text-[10px] text-slate-400">Arabic & English supported</span>
             </div>
@@ -171,7 +206,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
                   setStatus('completed');
                 }
               }}
-              placeholder="Enter lecture report (e.g. الحصه تمام و بلغت المدرسة)..."
+              placeholder="Paste a Google Drive share URL or enter a report note..."
               dir={isNoteArabic ? 'rtl' : 'ltr'}
               className={`w-full p-3 rounded-xl border border-slate-300 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition ${
                 isNoteArabic ? 'text-right' : 'text-left'

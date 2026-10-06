@@ -1,18 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { X, Upload, FileText, CheckCircle2, AlertCircle, RefreshCw, Sparkles, Copy } from 'lucide-react';
+import { X, Upload, FileText, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { parseSpreadsheet } from '../utils/parser';
-import { INITIAL_SPREADSHEET_CSV } from '../data/initialData';
 
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApplyData: (csvData: string) => void;
+  onApplyCurrentData: () => void;
 }
 
 export const ImportModal: React.FC<ImportModalProps> = ({
   isOpen,
   onClose,
   onApplyData,
+  onApplyCurrentData,
 }) => {
   const [csvText, setCsvText] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -73,10 +74,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
   };
 
-  const handleLoadCurrentSheetData = () => {
-    setCsvText(INITIAL_SPREADSHEET_CSV);
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
       <div
@@ -109,18 +106,21 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         {/* Body */}
         <div className="p-6 space-y-4">
-          {/* Quick load the current Google Sheet snapshot */}
+          {/* Restore all bundled Google Sheet tabs */}
           <div className="flex items-center justify-between bg-emerald-50/60 border border-emerald-200 rounded-xl p-3">
             <div className="flex items-center gap-2 text-xs text-emerald-900">
               <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Load the latest Google Sheet snapshot used as dashboard data.</span>
+              <span>Restore the bundled snapshot of all Google Sheet tabs.</span>
             </div>
             <button
               type="button"
-              onClick={handleLoadCurrentSheetData}
+              onClick={() => {
+                onApplyCurrentData();
+                onClose();
+              }}
               className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer shrink-0 shadow-xs"
             >
-              Load Current Sheet Data
+              Restore All Tabs
             </button>
           </div>
 

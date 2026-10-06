@@ -4,9 +4,9 @@ An academic lecture tracking and report analysis dashboard for managing and visu
 
 ## Dashboard data
 
-The initial dashboard data is a snapshot of the [teacher reports Google Sheet](https://docs.google.com/spreadsheets/d/1PeUsRcrft0Cmu0G5z3xy8UCryJdOGuFg_UcBbLhgmAw/edit?usp=sharing). It contains repeating `Lectures, Teacher, Grade, Report` column groups; lecture rows are shown for each teacher section and report cells contain the submitted update or file name.
+The initial dashboard data is a snapshot of all 11 tabs in the [teacher reports Google Sheet](https://docs.google.com/spreadsheets/d/1PeUsRcrft0Cmu0G5z3xy8UCryJdOGuFg_UcBbLhgmAw/edit?usp=sharing). The tabs include subject and language variants, plus the high-school subject tabs. They contain repeating `Lectures, Teacher, Grade, Report` column groups; lecture rows are shown for each teacher section and report cells contain the submitted update or file name.
 
-The dashboard does not sync edits from Google Sheets automatically. To load later sheet changes, export the sheet as CSV and use **Update / Import Sheet**. Imported data and dashboard edits are saved in this browser; **Reset** restores the bundled snapshot.
+Use **Sync Sheet** to fetch the latest data from all 11 tabs. The existing `Report` cell can contain either a Google Drive share URL or regular notes: Drive URLs open in the lecture preview, while plain text appears as the report note. Files must be accessible to the dashboard user. Imported data and dashboard edits are saved in this browser; **Reset** restores the bundled snapshot.
 
 ## Why GitHub Shows Source Code (And How to Publish the Live App)
 
