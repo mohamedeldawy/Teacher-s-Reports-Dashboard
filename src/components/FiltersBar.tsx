@@ -87,7 +87,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             }`}
           >
             <Table className="w-3.5 h-3.5" />
-            <span>Report Matrix (L1-L15)</span>
+            <span>Report Matrix</span>
           </button>
           <button
             id="viewmode-cards"
@@ -150,7 +150,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             <option value="all">All Grades / Stages</option>
             {availableGrades.map(g => (
               <option key={g} value={g}>
-                Grade {g}
+                {g}
               </option>
             ))}
           </select>

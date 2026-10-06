@@ -5,7 +5,7 @@ interface HeaderProps {
   onOpenImport: () => void;
   onExportCsv: () => void;
   onResetData: () => void;
-  totalTeachers: number;
+  totalSections: number;
   totalSubjects: number;
 }
 
@@ -13,7 +13,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenImport,
   onExportCsv,
   onResetData,
-  totalTeachers,
+  totalSections,
   totalSubjects,
 }) => {
   return (
@@ -29,11 +29,11 @@ export const Header: React.FC<HeaderProps> = ({
                 Academic Lecture Report Dashboard
               </h1>
               <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Live Spreadsheet
+                Google Sheet Snapshot
               </span>
             </div>
             <p className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-              <span>Tracking {totalTeachers} teachers across {totalSubjects} subjects</span>
+              <span>Tracking {totalSections} teacher sections across {totalSubjects} subjects</span>
               <span className="text-slate-300">•</span>
               <span className="hidden sm:inline">Multi-subject & lecture level updates</span>
             </p>
@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
             id="btn-reset-data"
             onClick={onResetData}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
-            title="Reset to original spreadsheet data"
+            title="Reset to the current Google Sheet snapshot"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span className="hidden md:inline">Reset</span>

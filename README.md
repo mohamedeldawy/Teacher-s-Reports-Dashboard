@@ -2,6 +2,12 @@
 
 An academic lecture tracking and report analysis dashboard for managing and visualizing teacher lecture updates, grade levels, and spreadsheet reports.
 
+## Dashboard data
+
+The initial dashboard data is a snapshot of the [teacher reports Google Sheet](https://docs.google.com/spreadsheets/d/1PeUsRcrft0Cmu0G5z3xy8UCryJdOGuFg_UcBbLhgmAw/edit?usp=sharing). It contains repeating `Lectures, Teacher, Grade, Report` column groups; lecture rows are shown for each teacher section and report cells contain the submitted update or file name.
+
+The dashboard does not sync edits from Google Sheets automatically. To load later sheet changes, export the sheet as CSV and use **Update / Import Sheet**. Imported data and dashboard edits are saved in this browser; **Reset** restores the bundled snapshot.
+
 ## Why GitHub Shows Source Code (And How to Publish the Live App)
 
 When you sync Google AI Studio with GitHub, GitHub stores the **source code files** (`.tsx`, `.ts`, `package.json`, `index.html`). GitHub does not automatically run web servers or execute Node/React apps on its repository page.

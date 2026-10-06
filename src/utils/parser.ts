@@ -32,7 +32,7 @@ export function formatGradeLabel(grade: string): string {
     case 'sec3':
       return 'Secondary 3';
     default:
-      return grade.toUpperCase();
+      return grade.trim();
   }
 }
 
@@ -153,7 +153,12 @@ function parseCsvLine(line: string): string[] {
     const char = line[i];
 
     if (char === '"') {
-      inQuotes = !inQuotes;
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
     } else if ((char === ',' || char === '\t') && !inQuotes) {
       result.push(current);
       current = '';
@@ -162,7 +167,117 @@ function parseCsvLine(line: string): string[] {
     }
   }
   result.push(current);
-  return result.map(c => c.replace(/^["']|["']$/g, '').trim());
+  return result.map(c => c.trim());
+}
+
+function normalizeLectureId(value: string): string {
+  const normalized = value.trim();
+  const match = normalized.match(/^(?:lecture|lec|l)\s*(\d+)$/i);
+  return match ? `L${Number(match[1])}` : normalized.toUpperCase();
+}
+
+function isHeaderRow(cells: string[]): boolean {
+  const firstCell = cells[0]?.trim().toLowerCase();
+  return firstCell === 'lectures' || firstCell === 'lecture' || firstCell === 'حصة';
+}
+
+function isTeacherGradeReportHeader(cells: string[]): boolean {
+  if (cells.length < 4 || cells.length % 4 !== 0) return false;
+
+  for (let i = 0; i < cells.length; i += 4) {
+    if (
+      cells[i]?.trim().toLowerCase() !== 'lectures' ||
+      cells[i + 1]?.trim().toLowerCase() !== 'teacher' ||
+      cells[i + 2]?.trim().toLowerCase() !== 'grade' ||
+      cells[i + 3]?.trim().toLowerCase() !== 'report'
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function parseTeacherGradeReportSheet(rows: string[][]): {
+  courses: TeacherCourse[];
+  allLectureIds: string[];
+} {
+  const courseMap = new Map<string, TeacherCourse>();
+  const lectureSet = new Set<string>();
+  let activeCourses: Array<TeacherCourse | undefined> = [];
+
+  for (const row of rows) {
+    if (isTeacherGradeReportHeader(row)) {
+      activeCourses = new Array<TeacherCourse | undefined>(row.length / 4);
+      continue;
+    }
+
+    for (let column = 0, group = 0; column < row.length; column += 4, group++) {
+      const rawLectureId = row[column]?.trim() || '';
+      if (!rawLectureId) continue;
+      const lectureId = normalizeLectureId(rawLectureId);
+      if (!/^L\d+$/i.test(lectureId)) continue;
+
+      lectureSet.add(lectureId);
+
+      const previousCourse = activeCourses[group];
+      const rawHeader = row[column + 1]?.trim() || previousCourse?.rawHeader || '';
+      const grade = row[column + 2]?.trim() || previousCourse?.grade || '';
+      if (!rawHeader || !grade) continue;
+
+      const courseKey = `${rawHeader.toLowerCase()}::${grade.toLowerCase()}`;
+      let course = courseMap.get(courseKey);
+      if (!course) {
+        const meta = parseHeaderCode(rawHeader);
+        course = {
+          id: courseKey,
+          rawHeader,
+          subject: meta.subject,
+          subjectCategory: meta.subjectCategory,
+          grade,
+          gradeLabel: formatGradeLabel(grade),
+          teacher: meta.teacher,
+          lectures: {},
+          totalLectures: 0,
+          completedLectures: 0,
+          completionRate: 0,
+        };
+        courseMap.set(courseKey, course);
+      }
+      activeCourses[group] = course;
+
+      const note = row[column + 3]?.trim() || '';
+      course.lectures[lectureId] = {
+        lectureId,
+        note,
+        status: detectLectureStatus(note),
+        timestamp: note ? 'Recently submitted' : undefined,
+      };
+    }
+  }
+
+  const courses = Array.from(courseMap.values()).map(course => {
+    const lectureEntries = Object.values(course.lectures);
+    const total = lectureEntries.length;
+    const completed = lectureEntries.filter(
+      lecture => lecture.status === 'completed' || (lecture.note && lecture.note.trim().length > 0)
+    ).length;
+
+    return {
+      ...course,
+      totalLectures: total,
+      completedLectures: completed,
+      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+    };
+  });
+
+  const allLectureIds = Array.from(lectureSet).sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+    return numA - numB;
+  });
+
+  return { courses, allLectureIds };
 }
 
 /**
@@ -181,13 +296,15 @@ export function parseSpreadsheet(csvRaw: string): {
     return { courses: [], allLectureIds: [] };
   }
 
-  // Find all block starts: lines that begin with "Lectures" or contain column headers
+  const rows = rawLines.map(parseCsvLine);
+  if (rows.some(isTeacherGradeReportHeader)) {
+    return parseTeacherGradeReportSheet(rows);
+  }
+
+  // Find all block starts by matching the header label, not lecture data rows.
   const blockStartIndices: number[] = [];
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i];
-    const cells = parseCsvLine(line);
-    // If first cell is "Lectures" or matches lecture header pattern
-    if (cells[0] && (cells[0].toLowerCase().includes('lecture') || cells[0].toLowerCase() === 'حصة')) {
+  for (let i = 0; i < rows.length; i++) {
+    if (isHeaderRow(rows[i])) {
       blockStartIndices.push(i);
     }
   }
@@ -202,9 +319,9 @@ export function parseSpreadsheet(csvRaw: string): {
 
   for (let b = 0; b < blockStartIndices.length; b++) {
     const startIdx = blockStartIndices[b];
-    const nextStartIdx = b + 1 < blockStartIndices.length ? blockStartIndices[b + 1] : rawLines.length;
+    const nextStartIdx = b + 1 < blockStartIndices.length ? blockStartIndices[b + 1] : rows.length;
 
-    const headerCells = parseCsvLine(rawLines[startIdx]);
+    const headerCells = rows[startIdx];
     // Pairs: (0, 1), (2, 3), (4, 5)...
     // 0 is "Lectures", 1 is Teacher Header
     const columnPairs: Array<{
@@ -229,14 +346,14 @@ export function parseSpreadsheet(csvRaw: string): {
 
     // Now iterate rows in this block (from startIdx + 1 to nextStartIdx - 1)
     for (let r = startIdx + 1; r < nextStartIdx; r++) {
-      const rowCells = parseCsvLine(rawLines[r]);
+      const rowCells = rows[r];
       if (rowCells.length === 0) continue;
 
       for (const pair of columnPairs) {
         const rawLectureId = rowCells[pair.lectureColIdx]?.trim() || '';
         if (!rawLectureId) continue;
 
-        const lectureId = rawLectureId.toUpperCase();
+        const lectureId = normalizeLectureId(rawLectureId);
         lectureSet.add(lectureId);
 
         const note = rowCells[pair.reportColIdx]?.trim() || '';
@@ -305,10 +422,10 @@ export function parseSpreadsheet(csvRaw: string): {
 export function exportCoursesToCsv(courses: TeacherCourse[], lectureList: string[]): string {
   if (courses.length === 0) return '';
 
-  // Header line: Lectures,Header1,Lectures,Header2...
+  // Keep teacher and grade metadata explicit so imported edits survive reloads.
   const headerParts: string[] = [];
-  courses.forEach(c => {
-    headerParts.push('Lectures', `"${c.rawHeader.replace(/"/g, '""')}"`);
+  courses.forEach(() => {
+    headerParts.push('Lectures', 'Teacher', 'Grade', 'Report');
   });
   const lines: string[] = [headerParts.join(',')];
 
@@ -316,7 +433,7 @@ export function exportCoursesToCsv(courses: TeacherCourse[], lectureList: string
   lectureList.forEach(lecId => {
     const rowParts: string[] = [];
     courses.forEach(c => {
-      rowParts.push(lecId);
+      rowParts.push(lecId, `"${c.rawHeader.replace(/"/g, '""')}"`, `"${c.grade.replace(/"/g, '""')}"`);
       const note = c.lectures[lecId]?.note || '';
       rowParts.push(note ? `"${note.replace(/"/g, '""')}"` : '');
     });
@@ -325,4 +442,3 @@ export function exportCoursesToCsv(courses: TeacherCourse[], lectureList: string
 
   return lines.join('\n');
 }
-

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Upload, FileText, CheckCircle2, AlertCircle, RefreshCw, Sparkles, Copy } from 'lucide-react';
 import { parseSpreadsheet } from '../utils/parser';
-import { RAW_SAMPLE_SPREADSHEET } from '../data/initialData';
+import { INITIAL_SPREADSHEET_CSV } from '../data/initialData';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -73,8 +73,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
   };
 
-  const handleLoadSample = () => {
-    setCsvText(RAW_SAMPLE_SPREADSHEET);
+  const handleLoadCurrentSheetData = () => {
+    setCsvText(INITIAL_SPREADSHEET_CSV);
   };
 
   return (
@@ -109,18 +109,18 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         {/* Body */}
         <div className="p-6 space-y-4">
-          {/* Quick load original prompt data */}
+          {/* Quick load the current Google Sheet snapshot */}
           <div className="flex items-center justify-between bg-emerald-50/60 border border-emerald-200 rounded-xl p-3">
             <div className="flex items-center gap-2 text-xs text-emerald-900">
               <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Want to restore the sample spreadsheet with your exact teacher data?</span>
+              <span>Load the latest Google Sheet snapshot used as dashboard data.</span>
             </div>
             <button
               type="button"
-              onClick={handleLoadSample}
+              onClick={handleLoadCurrentSheetData}
               className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer shrink-0 shadow-xs"
             >
-              Load Sample Data
+              Load Current Sheet Data
             </button>
           </div>
 
