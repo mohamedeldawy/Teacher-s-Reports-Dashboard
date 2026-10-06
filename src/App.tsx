@@ -20,6 +20,17 @@ import { CheckCircle2, AlertCircle, Info, BookOpen } from 'lucide-react';
 
 const STORAGE_KEY = 'academic_teacher_lecture_reports_v5';
 
+function matchesLectureStatus(lecture: LectureReport, status: FilterState['status']): boolean {
+  if (status === 'has_report') {
+    return lecture.status === 'completed' && hasLectureReport(lecture);
+  }
+  if (status === 'pending') {
+    return lecture.status === 'pending' && !lecture.note.trim() && !lecture.fileUrl?.trim();
+  }
+  if (status === 'issue') return lecture.status === 'issue';
+  return true;
+}
+
 export default function App() {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [lectureList, setLectureList] = useState<string[]>([]);
@@ -143,18 +154,9 @@ export default function App() {
         return false;
       }
 
-      // 4. Status filter
-      if (filters.status === 'has_report') {
-        const hasAnyReport = (Object.values(c.lectures) as LectureReport[]).some(hasLectureReport);
-        if (!hasAnyReport) return false;
-      } else if (filters.status === 'pending') {
-        const hasAnyPending = (Object.values(c.lectures) as LectureReport[]).some(
-          l => l.status === 'pending' && !l.note.trim() && !l.fileUrl?.trim()
-        );
-        if (!hasAnyPending) return false;
-      } else if (filters.status === 'issue') {
-        const hasAnyIssue = (Object.values(c.lectures) as LectureReport[]).some(l => l.status === 'issue');
-        if (!hasAnyIssue) return false;
+      const lectures = Object.values(c.lectures) as LectureReport[];
+      if (filters.status !== 'all' && !lectures.some(lecture => matchesLectureStatus(lecture, filters.status))) {
+        return false;
       }
 
       // 5. Search query (matches teacher, subject, grade, or any lecture note)
@@ -164,8 +166,11 @@ export default function App() {
         const matchesSubject = c.subject.toLowerCase().includes(query);
         const matchesGrade = c.grade.toLowerCase().includes(query);
         const matchesRaw = c.rawHeader.toLowerCase().includes(query);
-        const matchesNote = (Object.values(c.lectures) as LectureReport[]).some(
-          l => l.note.toLowerCase().includes(query) || Boolean(l.fileUrl?.toLowerCase().includes(query))
+        const matchesNote = lectures.some(
+          lecture =>
+            matchesLectureStatus(lecture, filters.status) &&
+            (lecture.note.toLowerCase().includes(query) ||
+              Boolean(lecture.fileUrl?.toLowerCase().includes(query)))
         );
 
         if (!matchesTeacher && !matchesSubject && !matchesGrade && !matchesRaw && !matchesNote) {
@@ -176,6 +181,31 @@ export default function App() {
       return true;
     });
   }, [courses, filters]);
+
+  const visibleCourses = useMemo(() => {
+    if (filters.status === 'all') return filteredCourses;
+
+    return filteredCourses.map(course => {
+      const lectures = Object.fromEntries(
+        Object.entries(course.lectures).filter(([, lecture]) =>
+          matchesLectureStatus(lecture, filters.status)
+        )
+      );
+
+      return {
+        ...course,
+        lectures,
+      };
+    });
+  }, [filteredCourses, filters.status]);
+
+  const visibleLectureList = useMemo(() => {
+    if (filters.status === 'all') return lectureList;
+    const visibleIds = new Set(
+      visibleCourses.flatMap(course => Object.keys(course.lectures))
+    );
+    return lectureList.filter(lectureId => visibleIds.has(lectureId));
+  }, [filters.status, lectureList, visibleCourses]);
 
   // Handle saving an individual lecture report
   const handleSaveLecture = (
@@ -371,23 +401,24 @@ export default function App() {
         <div className="transition-all duration-200">
           {filters.viewMode === 'report_matrix' && (
             <ReportMatrixView
-              courses={filteredCourses}
-              lectureList={lectureList}
+              courses={visibleCourses}
+              lectureList={visibleLectureList}
               onSelectLecture={handleSelectLecture}
             />
           )}
 
           {filters.viewMode === 'teacher_cards' && (
             <TeacherCardsView
-              courses={filteredCourses}
-              lectureList={lectureList}
+              courses={visibleCourses}
+              lectureList={visibleLectureList}
               onSelectLecture={handleSelectLecture}
             />
           )}
 
           {filters.viewMode === 'updates_feed' && (
             <RecentUpdatesFeed
-              courses={filteredCourses}
+              courses={visibleCourses}
+              statusFilter={filters.status}
               onSelectLecture={handleSelectLecture}
             />
           )}

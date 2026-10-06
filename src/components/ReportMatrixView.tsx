@@ -204,7 +204,11 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                             <div className="flex flex-col h-full justify-between gap-1">
                               <div className="flex items-center justify-between">
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  {status === 'issue' ? (
+                                    <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                                  ) : (
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  )}
                                   <span>{lecId}</span>
                                 </span>
                                 <Eye className="w-3 h-3 text-slate-400 opacity-0 group-hover/cell:opacity-100 transition-opacity" />

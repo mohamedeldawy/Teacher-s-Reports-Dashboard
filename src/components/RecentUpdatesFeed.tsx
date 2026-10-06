@@ -1,15 +1,17 @@
 import React from 'react';
-import { Activity, CheckCircle2, AlertTriangle, MessageSquare, Clock, User, ArrowRight } from 'lucide-react';
-import { TeacherCourse, LectureReport } from '../types';
+import { Activity, CheckCircle2, AlertTriangle, Clock, ArrowRight } from 'lucide-react';
+import { FilterState, LectureStatus, TeacherCourse, LectureReport } from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
 
 interface RecentUpdatesFeedProps {
   courses: TeacherCourse[];
+  statusFilter: FilterState['status'];
   onSelectLecture: (course: TeacherCourse, lectureId: string) => void;
 }
 
 export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
   courses,
+  statusFilter,
   onSelectLecture,
 }) => {
   // Extract all lecture reports with notes
@@ -17,23 +19,32 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
     course: TeacherCourse;
     lectureId: string;
     note: string;
-    status: string;
+    status: LectureStatus;
     timestamp?: string;
   }> = [];
 
   courses.forEach(course => {
     (Object.values(course.lectures) as LectureReport[]).forEach(lecture => {
-      if (hasLectureReport(lecture)) {
+      if (hasLectureReport(lecture) || statusFilter !== 'all') {
         updates.push({
           course,
           lectureId: lecture.lectureId,
           note: lecture.note || (lecture.fileUrl ? 'View report file' : ''),
           status: lecture.status,
-          timestamp: lecture.timestamp || 'Recorded in Sheet',
+          timestamp: lecture.timestamp || (hasLectureReport(lecture) ? 'Recorded in Sheet' : undefined),
         });
       }
     });
   });
+
+  const updatesLabel =
+    statusFilter === 'pending'
+      ? 'Pending Lectures'
+      : statusFilter === 'issue'
+        ? 'Lectures Needing Attention'
+        : statusFilter === 'has_report'
+          ? 'Completed Reports'
+          : 'Active Notes';
 
   if (updates.length === 0) {
     return (
@@ -54,12 +65,20 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
           <div>
             <h2 className="text-sm font-bold text-slate-900">Lecture Updates Feed</h2>
             <p className="text-xs text-slate-500">
-              Listing all {updates.length} submitted reports across filtered teachers
+              Showing {updates.length} {updatesLabel.toLowerCase()} across filtered teachers
             </p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          {updates.length} Active Notes
+        <span
+          className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+            statusFilter === 'issue'
+              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : statusFilter === 'pending'
+                ? 'bg-slate-100 text-slate-700 border-slate-200'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          }`}
+        >
+          {updates.length} {updatesLabel}
         </span>
       </div>
 
@@ -74,8 +93,22 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-600 text-white">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold ${
+                      item.status === 'issue'
+                        ? 'bg-amber-500 text-white'
+                        : item.status === 'pending'
+                          ? 'bg-slate-600 text-white'
+                          : 'bg-emerald-600 text-white'
+                    }`}
+                  >
+                    {item.status === 'issue' ? (
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                    ) : item.status === 'pending' ? (
+                      <Clock className="w-3.5 h-3.5" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    )}
                     {item.lectureId}
                   </span>
                   <span className="font-bold text-slate-900 text-sm">{item.course.teacher}</span>
@@ -86,8 +119,12 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <Clock className="w-3 h-3" />
-                  <span>{item.timestamp}</span>
+                  {item.timestamp && (
+                    <>
+                      <Clock className="w-3 h-3" />
+                      <span>{item.timestamp}</span>
+                    </>
+                  )}
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 transition-transform group-hover:translate-x-1" />
                 </div>
               </div>
