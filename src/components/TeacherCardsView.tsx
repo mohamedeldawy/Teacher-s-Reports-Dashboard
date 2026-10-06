@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, CheckCircle2, Clock, BookOpen, AlertCircle, Plus, ChevronRight } from 'lucide-react';
+import { User, CheckCircle2, ChevronRight } from 'lucide-react';
 import { TeacherCourse, LectureReport } from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
 
@@ -92,7 +92,7 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 font-bold'
                             : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-600'
                         }`}
-                        title={hasReport ? `${lecId}: ${reportText}` : `${lecId}: No update yet`}
+                        title={hasReport ? `${lecId}: ${reportText}` : undefined}
                       >
                         {hasReport && <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />}
                         <span>{lecId}</span>
@@ -103,19 +103,13 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
               </div>
 
               {/* Latest submitted reports list */}
-              <div className="mt-4 pt-3 border-t border-slate-100">
-                <p className="text-xs font-semibold text-slate-500 mb-2 flex items-center justify-between">
-                  <span>Reported Updates ({reportedLectures.length})</span>
-                  {reportedLectures.length > 0 && (
+              {reportedLectures.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                  <p className="text-xs font-semibold text-slate-500 mb-2 flex items-center justify-between">
+                    <span>Reported Updates ({reportedLectures.length})</span>
                     <span className="text-[10px] text-emerald-600 font-normal">Active notes</span>
-                  )}
-                </p>
+                  </p>
 
-                {reportedLectures.length === 0 ? (
-                  <div className="p-2.5 rounded-lg bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-400">
-                    No lecture updates submitted yet.
-                  </div>
-                ) : (
                   <div className="space-y-2 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
                     {reportedLectures.map(lec => {
                       const isArabicText = isArabic(lec.note);
@@ -143,8 +137,8 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                       );
                     })}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Card footer */}

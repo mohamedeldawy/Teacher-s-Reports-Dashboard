@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Clock, AlertTriangle, XCircle, Sparkles, MessageSquare, Trash2, FileText } from 'lucide-react';
+import { X, CheckCircle2, Clock, AlertTriangle, MessageSquare, Trash2, FileText } from 'lucide-react';
 import { TeacherCourse, LectureStatus } from '../types';
 import { getGoogleDrivePreviewUrl, isArabic } from '../utils/parser';
 
@@ -10,16 +10,6 @@ interface LectureModalProps {
   lectureId: string | null;
   onSaveLecture: (courseId: string, lectureId: string, note: string, status: LectureStatus) => void;
 }
-
-const QUICK_TEMPLATES = [
-  'الحصه تمام و بلغت المدرسة',
-  'الحصه تمام و بلغت المدرس',
-  'تم الانتهاء من الدرس وتسليم الواجب',
-  'تم حل تدريبات كتاب المعاصر',
-  'اعتذار من المعلم وتأجيل الحصة',
-  'غياب بعض الطلاب وتم التواصل مع ولي الأمر',
-  'Lecture completed smoothly with active student engagement',
-];
 
 export const LectureModal: React.FC<LectureModalProps> = ({
   isOpen,
@@ -49,8 +39,6 @@ export const LectureModal: React.FC<LectureModalProps> = ({
   const isNoteArabic = isArabic(note);
   const fileUrl = course.lectures[lectureId]?.fileUrl;
   const filePreviewUrl = fileUrl ? getGoogleDrivePreviewUrl(fileUrl) : null;
-  const isReportFile = /\.(pdf|pptx?|docx?|xlsx?|jpe?g|png|gif)$/i.test(note.trim());
-
   const handleSave = () => {
     onSaveLecture(course.id, lectureId, note.trim(), status);
     onClose();
@@ -96,7 +84,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
 
         {/* Modal Content */}
         <div className="p-5 space-y-4">
-          {(fileUrl || isReportFile) && (
+          {fileUrl && (
             <section className="rounded-xl border border-slate-200 overflow-hidden">
               <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-2 text-xs font-semibold text-slate-700">
                 <FileText className="w-4 h-4 text-emerald-600" />
@@ -133,7 +121,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
             <label className="block text-xs font-semibold text-slate-600 mb-2">
               Lecture Status:
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setStatus('completed')}
@@ -173,18 +161,6 @@ export const LectureModal: React.FC<LectureModalProps> = ({
                 <span>Attention</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setStatus('cancelled')}
-                className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                  status === 'cancelled'
-                    ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                <span>Canceled</span>
-              </button>
             </div>
           </div>
 
@@ -206,7 +182,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
                   setStatus('completed');
                 }
               }}
-              placeholder="Paste a Google Drive share URL or enter a report note..."
+              placeholder=""
               dir={isNoteArabic ? 'rtl' : 'ltr'}
               className={`w-full p-3 rounded-xl border border-slate-300 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition ${
                 isNoteArabic ? 'text-right' : 'text-left'
@@ -214,28 +190,6 @@ export const LectureModal: React.FC<LectureModalProps> = ({
             />
           </div>
 
-          {/* Quick Arabic / English Preset Templates */}
-          <div>
-            <p className="text-[11px] font-semibold text-slate-500 mb-2 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-600" />
-              <span>Quick Template Inserts:</span>
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_TEMPLATES.map((tmpl, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setNote(tmpl);
-                    setStatus('completed');
-                  }}
-                  className="px-2.5 py-1 rounded-md text-[11px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 border border-slate-200 text-slate-700 transition cursor-pointer"
-                >
-                  {tmpl}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Modal Footer */}

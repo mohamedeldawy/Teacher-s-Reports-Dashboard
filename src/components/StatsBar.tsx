@@ -1,17 +1,15 @@
 import React from 'react';
-import { BookOpen, Users, CheckCircle2, Clock, AlertTriangle, TrendingUp } from 'lucide-react';
+import { BookOpen, Users, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { TeacherCourse, LectureReport } from '../types';
 import { hasLectureReport } from '../utils/parser';
 
 interface StatsBarProps {
-  courses: TeacherCourse[];
   filteredCourses: TeacherCourse[];
   onQuickFilterStatus?: (status: 'all' | 'has_report' | 'pending' | 'issue') => void;
   activeStatusFilter: 'all' | 'has_report' | 'pending' | 'issue';
 }
 
 export const StatsBar: React.FC<StatsBarProps> = ({
-  courses,
   filteredCourses,
   onQuickFilterStatus,
   activeStatusFilter,
@@ -34,14 +32,24 @@ export const StatsBar: React.FC<StatsBarProps> = ({
     });
   });
 
-  const pendingLectures = Math.max(0, totalLectures - completedLectures);
+  const pendingLectures = filteredCourses.reduce(
+    (count, course) =>
+      count +
+      (Object.values(course.lectures) as LectureReport[]).filter(
+        lecture =>
+          lecture.status === 'pending' &&
+          !lecture.note.trim() &&
+          !lecture.fileUrl?.trim()
+      ).length,
+    0
+  );
   const overallRate = totalLectures > 0 ? Math.round((completedLectures / totalLectures) * 100) : 0;
 
   const uniqueSubjects = new Set(filteredCourses.map(c => c.subjectCategory)).size;
   const uniqueTeachers = new Set(filteredCourses.map(c => c.teacher)).size;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
       {/* Subject & Teachers */}
       <div className="bg-white rounded-xl p-3.5 border border-slate-200 shadow-xs flex items-center justify-between">
         <div>
@@ -116,6 +124,30 @@ export const StatsBar: React.FC<StatsBarProps> = ({
           </div>
           <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
             <Clock className="w-5 h-5" />
+          </div>
+        </div>
+      </button>
+
+      {/* Lectures requiring attention */}
+      <button
+        id="stat-card-issue"
+        onClick={() => onQuickFilterStatus && onQuickFilterStatus(activeStatusFilter === 'issue' ? 'all' : 'issue')}
+        className={`text-left rounded-xl p-3.5 border transition cursor-pointer ${
+          activeStatusFilter === 'issue'
+            ? 'bg-rose-50/80 border-rose-300 ring-2 ring-rose-500/20 shadow-xs'
+            : 'bg-white border-slate-200 hover:border-rose-200 shadow-xs'
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-rose-700">Attention</p>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className="text-2xl font-bold text-rose-800">{issueLectures}</span>
+              <span className="text-xs text-rose-600">lectures</span>
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
       </button>

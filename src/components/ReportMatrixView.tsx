@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Clock, AlertTriangle, XCircle, Plus, Eye, User, Sparkles } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Eye, User, Sparkles } from 'lucide-react';
 import { TeacherCourse, LectureReport } from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
 
@@ -161,7 +161,7 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                           key={lecId}
                           onClick={() => onSelectLecture(course, lecId)}
                           className="p-1 text-center border-r border-slate-200 cursor-pointer hover:scale-105 transition-transform"
-                          title={`${course.teacher} - ${lecId}: ${noteText || 'No report yet'}`}
+                          title={hasNote ? `${course.teacher} - ${lecId}: ${noteText}` : undefined}
                         >
                           <div
                             className={`h-8 rounded flex items-center justify-center text-[10px] font-medium border ${
@@ -178,9 +178,7 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                               ) : (
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               )
-                            ) : (
-                              '—'
-                            )}
+                            ) : null}
                           </div>
                         </td>
                       );
@@ -198,9 +196,7 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                             hasNote
                               ? status === 'issue'
                                 ? 'bg-amber-50/90 border-amber-300 text-amber-950 hover:bg-amber-100 hover:shadow-xs'
-                                : status === 'cancelled'
-                                ? 'bg-rose-50 border-rose-300 text-rose-950 hover:bg-rose-100'
-                                : 'bg-emerald-50/90 border-emerald-300 text-emerald-950 hover:bg-emerald-100 hover:shadow-xs'
+                                  : 'bg-emerald-50/90 border-emerald-300 text-emerald-950 hover:bg-emerald-100 hover:shadow-xs'
                               : 'bg-slate-50/60 border-slate-200 text-slate-400 hover:bg-slate-100 hover:border-slate-300'
                           }`}
                         >
@@ -224,15 +220,7 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                                 {noteText}
                               </p>
                             </div>
-                          ) : (
-                            <div className="h-full flex flex-col items-center justify-center py-2 text-slate-300 group-hover/cell:text-slate-500 transition-colors">
-                              <span className="text-[10px] font-semibold text-slate-400">{lecId}</span>
-                              <div className="flex items-center gap-0.5 text-[10px] mt-0.5">
-                                <Plus className="w-2.5 h-2.5" />
-                                <span className="text-[9px]">Add</span>
-                              </div>
-                            </div>
-                          )}
+                          ) : null}
                         </div>
                       </td>
                     );

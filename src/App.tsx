@@ -18,7 +18,7 @@ import {
 import { GOOGLE_SHEET_ID, INITIAL_SPREADSHEETS } from './data/initialData';
 import { CheckCircle2, AlertCircle, Info, BookOpen } from 'lucide-react';
 
-const STORAGE_KEY = 'academic_teacher_lecture_reports_v4';
+const STORAGE_KEY = 'academic_teacher_lecture_reports_v5';
 
 export default function App() {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
@@ -192,9 +192,9 @@ export default function App() {
       updatedLectures[lectureId] = {
         lectureId,
         note: fileUrl ? '' : note,
-        status: fileUrl ? 'completed' : status,
+        status: fileUrl ? 'completed' : note.trim() ? status : 'pending',
         fileUrl,
-        timestamp: note ? 'Just updated' : undefined,
+        timestamp: note.trim() ? 'Just updated' : undefined,
       };
 
       const lectureEntries = Object.values(updatedLectures) as LectureReport[];
@@ -352,7 +352,6 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* KPI & Summary Bar */}
         <StatsBar
-          courses={courses}
           filteredCourses={filteredCourses}
           onQuickFilterStatus={status => setFilters(prev => ({ ...prev, status }))}
           activeStatusFilter={filters.status}

@@ -40,9 +40,6 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
       <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-xs">
         <Activity className="w-10 h-10 text-slate-300 mx-auto mb-2" />
         <h3 className="text-sm font-semibold text-slate-700">No Lecture Updates Found</h3>
-        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-          No lecture reports match the active filters. Check the Report Matrix to add or view lecture notes.
-        </p>
       </div>
     );
   }
