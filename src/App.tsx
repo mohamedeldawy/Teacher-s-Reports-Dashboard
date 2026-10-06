@@ -9,10 +9,10 @@ import { LectureModal } from './components/LectureModal';
 import { ImportModal } from './components/ImportModal';
 import { TeacherCourse, FilterState, LectureStatus, LectureReport } from './types';
 import { parseSpreadsheet, exportCoursesToCsv } from './utils/parser';
-import { RAW_SAMPLE_SPREADSHEET } from './data/initialData';
+import { INITIAL_SPREADSHEET_CSV } from './data/initialData';
 import { CheckCircle2, AlertCircle, Info, BookOpen } from 'lucide-react';
 
-const STORAGE_KEY = 'academic_teacher_lecture_reports_v1';
+const STORAGE_KEY = 'academic_teacher_lecture_reports_v2';
 
 export default function App() {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
@@ -45,13 +45,13 @@ export default function App() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      const csvToLoad = stored && stored.trim().length > 0 ? stored : RAW_SAMPLE_SPREADSHEET;
+      const csvToLoad = stored && stored.trim().length > 0 ? stored : INITIAL_SPREADSHEET_CSV;
       const { courses: parsedCourses, allLectureIds } = parseSpreadsheet(csvToLoad);
       setCourses(parsedCourses);
       setLectureList(allLectureIds);
     } catch (e) {
       console.error('Error loading initial data:', e);
-      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheet(RAW_SAMPLE_SPREADSHEET);
+      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheet(INITIAL_SPREADSHEET_CSV);
       setCourses(fallbackCourses);
       setLectureList(allLectureIds);
     }
@@ -231,11 +231,11 @@ export default function App() {
     }
   };
 
-  // Reset to original data
+  // Reset to the bundled Google Sheet snapshot
   const handleResetData = () => {
-    if (window.confirm('Reset all lecture reports back to the original spreadsheet data?')) {
+    if (window.confirm('Reset all lecture reports back to the current Google Sheet snapshot?')) {
       localStorage.removeItem(STORAGE_KEY);
-      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheet(RAW_SAMPLE_SPREADSHEET);
+      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheet(INITIAL_SPREADSHEET_CSV);
       setCourses(fallbackCourses);
       setLectureList(allLectureIds);
       setFilters({
@@ -246,7 +246,7 @@ export default function App() {
         searchQuery: '',
         viewMode: 'report_matrix',
       });
-      showToast('Reset dashboard to original spreadsheet data');
+      showToast('Reset dashboard to the current Google Sheet snapshot');
     }
   };
 
@@ -263,7 +263,7 @@ export default function App() {
         onOpenImport={() => setIsImportOpen(true)}
         onExportCsv={handleExportCsv}
         onResetData={handleResetData}
-        totalTeachers={courses.length}
+        totalSections={courses.length}
         totalSubjects={availableSubjects.length}
       />
 

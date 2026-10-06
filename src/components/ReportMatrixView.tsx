@@ -249,7 +249,7 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
         <span>Showing {courses.length} teacher sections</span>
         <span className="flex items-center gap-1 text-slate-600">
           <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-          Real-time updates synced with active spreadsheet
+          Current Google Sheet snapshot
         </span>
       </div>
     </div>
