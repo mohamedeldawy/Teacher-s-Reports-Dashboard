@@ -28,6 +28,7 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {courses.map(course => {
         const reportedLectures = (Object.values(course.lectures) as LectureReport[]).filter(hasLectureReport);
+        const courseLectureList = lectureList.filter(lectureId => course.lectures[lectureId]);
 
         return (
           <div
@@ -78,7 +79,7 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                   Lectures (Click to View / Edit)
                 </p>
                 <div className="grid grid-cols-5 gap-1.5">
-                  {lectureList.map(lecId => {
+                  {courseLectureList.map(lecId => {
                     const lecture = course.lectures[lecId];
                     const hasReport = Boolean(lecture && hasLectureReport(lecture));
                     const reportText = lecture?.note || (lecture?.fileUrl ? 'View report file' : '');
@@ -123,7 +124,13 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                             <span className="font-bold text-emerald-800 text-[11px]">
                               {lec.lectureId}
                             </span>
-                            <span className="text-[10px] text-emerald-600 font-medium">Completed</span>
+                            <span
+                              className={`text-[10px] font-medium ${
+                                lec.status === 'issue' ? 'text-amber-700' : 'text-emerald-600'
+                              }`}
+                            >
+                              {lec.status === 'issue' ? 'Attention' : 'Completed'}
+                            </span>
                           </div>
                           <p
                             dir={isArabicText ? 'rtl' : 'ltr'}
@@ -147,7 +154,7 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                 {course.rawHeader}
               </span>
               <button
-                onClick={() => onSelectLecture(course, lectureList[0] || 'L1')}
+                onClick={() => onSelectLecture(course, courseLectureList[0] || 'L1')}
                 className="text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
               >
                 Inspect <ChevronRight className="w-3.5 h-3.5" />

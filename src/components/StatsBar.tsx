@@ -23,7 +23,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
     const lectureList = Object.values(course.lectures) as LectureReport[];
     totalLectures += lectureList.length;
     lectureList.forEach(l => {
-      if (hasLectureReport(l)) {
+      if (l.status === 'completed' && hasLectureReport(l)) {
         completedLectures++;
       }
       if (l.status === 'issue') {
