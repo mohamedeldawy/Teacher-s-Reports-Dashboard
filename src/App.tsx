@@ -31,6 +31,33 @@ function matchesLectureStatus(lecture: LectureReport, status: FilterState['statu
   return true;
 }
 
+function preserveLocalLectureStatuses(
+  latestCourses: TeacherCourse[],
+  currentCourses: TeacherCourse[]
+): TeacherCourse[] {
+  const currentCoursesById = new Map(currentCourses.map(course => [course.id, course]));
+
+  return latestCourses.map(course => {
+    const currentCourse = currentCoursesById.get(course.id);
+    if (!currentCourse) return course;
+
+    const lectures = { ...course.lectures };
+    Object.entries(lectures).forEach(([lectureId, latestLecture]) => {
+      const currentLecture = currentCourse.lectures[lectureId];
+      if (
+        currentLecture &&
+        currentLecture.note === latestLecture.note &&
+        currentLecture.fileUrl === latestLecture.fileUrl &&
+        hasLectureReport(latestLecture)
+      ) {
+        lectures[lectureId] = { ...latestLecture, status: currentLecture.status };
+      }
+    });
+
+    return { ...course, lectures };
+  });
+}
+
 export default function App() {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [lectureList, setLectureList] = useState<string[]>([]);
@@ -332,10 +359,11 @@ export default function App() {
         }
         return { name, csv: await response.text() };
       }));
-      const { courses: latestCourses, allLectureIds } = parseSpreadsheetTabs(tabs);
-      if (latestCourses.length === 0) {
+      const { courses: parsedCourses, allLectureIds } = parseSpreadsheetTabs(tabs);
+      if (parsedCourses.length === 0) {
         throw new Error('No teacher sections were found in the Google Sheet.');
       }
+      const latestCourses = preserveLocalLectureStatuses(parsedCourses, courses);
 
       setCourses(latestCourses);
       setLectureList(allLectureIds);
