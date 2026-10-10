@@ -20,6 +20,16 @@ import { CheckCircle2, AlertCircle, Info, BookOpen } from 'lucide-react';
 
 const STORAGE_KEY = 'academic_teacher_lecture_reports_v5';
 
+type LocalLectureEdits = Record<string, Record<string, LectureReport>>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isLectureStatus(status: unknown): status is LectureStatus {
+  return status === 'completed' || status === 'pending' || status === 'issue';
+}
+
 function matchesLectureStatus(lecture: LectureReport, status: FilterState['status']): boolean {
   if (status === 'has_report') {
     return lecture.status === 'completed' && hasLectureReport(lecture);
@@ -31,36 +41,68 @@ function matchesLectureStatus(lecture: LectureReport, status: FilterState['statu
   return true;
 }
 
-function preserveLocalLectureStatuses(
+function isLocalLectureEdits(value: unknown): value is LocalLectureEdits {
+  if (!isRecord(value)) return false;
+
+  return Object.values(value).every(lectures => {
+    if (!isRecord(lectures)) return false;
+
+    return Object.values(lectures).every(lecture =>
+      isRecord(lecture) &&
+      typeof lecture.lectureId === 'string' &&
+      typeof lecture.note === 'string' &&
+      isLectureStatus(lecture.status) &&
+      (lecture.fileUrl === undefined || typeof lecture.fileUrl === 'string') &&
+      (lecture.timestamp === undefined || typeof lecture.timestamp === 'string') &&
+      (lecture.updatedBy === undefined || typeof lecture.updatedBy === 'string')
+    );
+  });
+}
+
+function mergeLocalLectureEdits(
   latestCourses: TeacherCourse[],
-  currentCourses: TeacherCourse[]
+  currentCourses: TeacherCourse[],
+  localEdits: LocalLectureEdits
 ): TeacherCourse[] {
   const currentCoursesById = new Map(currentCourses.map(course => [course.id, course]));
 
   return latestCourses.map(course => {
     const currentCourse = currentCoursesById.get(course.id);
-    if (!currentCourse) return course;
-
     const lectures = { ...course.lectures };
     Object.entries(lectures).forEach(([lectureId, latestLecture]) => {
-      const currentLecture = currentCourse.lectures[lectureId];
-      if (
+      const localEdit = localEdits[course.id]?.[lectureId];
+      const currentLecture = currentCourse?.lectures[lectureId];
+
+      if (localEdit) {
+        lectures[lectureId] = localEdit;
+      } else if (
         currentLecture &&
         currentLecture.note === latestLecture.note &&
-        currentLecture.fileUrl === latestLecture.fileUrl &&
-        hasLectureReport(latestLecture)
+        currentLecture.fileUrl === latestLecture.fileUrl
       ) {
+        // Retain status-only edits made before local edit tracking was added.
         lectures[lectureId] = { ...latestLecture, status: currentLecture.status };
       }
     });
 
-    return { ...course, lectures };
+    const lectureEntries = Object.values(lectures);
+    const total = lectureEntries.length;
+    const completed = lectureEntries.filter(hasLectureReport).length;
+
+    return {
+      ...course,
+      lectures,
+      totalLectures: total,
+      completedLectures: completed,
+      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+    };
   });
 }
 
 export default function App() {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [lectureList, setLectureList] = useState<string[]>([]);
+  const [localEdits, setLocalEdits] = useState<LocalLectureEdits>({});
   const [filters, setFilters] = useState<FilterState>({
     subject: 'all',
     grade: 'all',
@@ -94,10 +136,14 @@ export default function App() {
         const savedData = JSON.parse(stored) as {
           courses?: TeacherCourse[];
           allLectureIds?: string[];
+          localEdits?: unknown;
         };
         if (Array.isArray(savedData.courses) && Array.isArray(savedData.allLectureIds)) {
           setCourses(savedData.courses);
           setLectureList(savedData.allLectureIds);
+          if (isLocalLectureEdits(savedData.localEdits)) {
+            setLocalEdits(savedData.localEdits);
+          }
           return;
         }
       }
@@ -113,17 +159,26 @@ export default function App() {
     }
   }, []);
 
-  // Save courses to localStorage whenever updated
-  const saveCoursesToStorage = (updatedCourses: TeacherCourse[]) => {
-    setCourses(updatedCourses);
+  const saveDashboardData = (
+    updatedCourses: TeacherCourse[],
+    updatedLectureIds: string[],
+    updatedLocalEdits: LocalLectureEdits
+  ): boolean => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         courses: updatedCourses,
-        allLectureIds: lectureList,
+        allLectureIds: updatedLectureIds,
+        localEdits: updatedLocalEdits,
       }));
     } catch (e) {
-      console.error('Error saving to storage:', e);
+      console.error('Error saving dashboard data:', e);
+      return false;
     }
+
+    setCourses(updatedCourses);
+    setLectureList(updatedLectureIds);
+    setLocalEdits(updatedLocalEdits);
+    return true;
   };
 
   // Available subjects from current dataset
@@ -241,18 +296,21 @@ export default function App() {
     note: string,
     status: LectureStatus
   ) => {
+    let savedLecture: LectureReport | undefined;
     const updatedCourses = courses.map(course => {
       if (course.id !== courseId) return course;
 
       const updatedLectures = { ...course.lectures };
       const fileUrl = getGoogleDrivePreviewUrl(note) ? note : undefined;
-      updatedLectures[lectureId] = {
+      const lecture: LectureReport = {
         lectureId,
         note: fileUrl ? '' : note,
         status: fileUrl ? 'completed' : note.trim() ? status : 'pending',
         fileUrl,
         timestamp: note.trim() ? 'Just updated' : undefined,
       };
+      savedLecture = lecture;
+      updatedLectures[lectureId] = lecture;
 
       const lectureEntries = Object.values(updatedLectures) as LectureReport[];
       const total = lectureEntries.length;
@@ -267,7 +325,22 @@ export default function App() {
       };
     });
 
-    saveCoursesToStorage(updatedCourses);
+    if (!savedLecture) {
+      showToast('Could not find this lecture to save the update.');
+      return;
+    }
+
+    const updatedLocalEdits = {
+      ...localEdits,
+      [courseId]: {
+        ...localEdits[courseId],
+        [lectureId]: savedLecture,
+      },
+    };
+    if (!saveDashboardData(updatedCourses, lectureList, updatedLocalEdits)) {
+      showToast('Could not save this update in browser storage.');
+      return;
+    }
     showToast(`Saved update for ${selectedCourse?.teacher || 'Teacher'} - ${lectureId}`);
   };
 
@@ -276,12 +349,10 @@ export default function App() {
     try {
       const { courses: parsedCourses, allLectureIds } = parseSpreadsheet(csvText);
       if (parsedCourses.length > 0) {
-        setCourses(parsedCourses);
-        setLectureList(allLectureIds);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          courses: parsedCourses,
-          allLectureIds,
-        }));
+        if (!saveDashboardData(parsedCourses, allLectureIds, {})) {
+          showToast('Could not save the imported data in browser storage.');
+          return;
+        }
         showToast(`Successfully imported ${parsedCourses.length} teacher sections!`);
       }
     } catch (e) {
@@ -316,6 +387,7 @@ export default function App() {
       const { courses: fallbackCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
       setCourses(fallbackCourses);
       setLectureList(allLectureIds);
+      setLocalEdits({});
       setFilters({
         subject: 'all',
         grade: 'all',
@@ -330,15 +402,7 @@ export default function App() {
 
   const handleRestoreCurrentSheetData = () => {
     const { courses: initialCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
-    setCourses(initialCourses);
-    setLectureList(allLectureIds);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        courses: initialCourses,
-        allLectureIds,
-      }));
-    } catch (e) {
-      console.error('Error restoring sheet data:', e);
+    if (!saveDashboardData(initialCourses, allLectureIds, {})) {
       showToast('Could not save the current sheet data in this browser.');
       return;
     }
@@ -363,17 +427,15 @@ export default function App() {
       if (parsedCourses.length === 0) {
         throw new Error('No teacher sections were found in the Google Sheet.');
       }
-      const latestCourses = preserveLocalLectureStatuses(parsedCourses, courses);
-
-      setCourses(latestCourses);
-      setLectureList(allLectureIds);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          courses: latestCourses,
-          allLectureIds,
-        }));
-      } catch (error) {
-        console.error('Could not save refreshed sheet data in this browser:', error);
+      const savedState = localStorage.getItem(STORAGE_KEY);
+      const savedData: {
+        courses?: TeacherCourse[];
+        localEdits?: unknown;
+      } = savedState ? JSON.parse(savedState) : {};
+      const currentCourses = Array.isArray(savedData.courses) ? savedData.courses : [];
+      const currentEdits = isLocalLectureEdits(savedData.localEdits) ? savedData.localEdits : {};
+      const latestCourses = mergeLocalLectureEdits(parsedCourses, currentCourses, currentEdits);
+      if (!saveDashboardData(latestCourses, allLectureIds, currentEdits)) {
         showToast('Sheet refreshed, but browser storage could not be updated.');
         return;
       }
