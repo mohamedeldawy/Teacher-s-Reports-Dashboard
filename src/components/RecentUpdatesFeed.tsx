@@ -147,7 +147,13 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
                     </span>
                   )}
                   {item.teacherReportStatus && (
-                    <span className="px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 text-[11px]">
+                    <span className={`px-2 py-1 rounded-md border text-[11px] font-semibold ${
+                      item.teacherReportStatus === 'approved'
+                        ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                        : item.teacherReportStatus === 'argument'
+                          ? 'border-amber-200 bg-amber-100 text-amber-900'
+                          : 'border-rose-200 bg-rose-100 text-rose-800'
+                    }`}>
                       {TEACHER_REPORT_STATUS_LABELS[item.teacherReportStatus]}
                     </span>
                   )}

@@ -158,12 +158,24 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                             </p>
                           )}
                           {(lec.sentDate || lec.teacherReportStatus) && (
-                            <p className="mt-1 text-[10px] text-slate-600">
-                              {lec.sentDate && `Sent: ${lec.sentDate}`}
-                              {lec.sentDate && lec.teacherReportStatus && ' · '}
-                              {lec.teacherReportStatus &&
-                                TEACHER_REPORT_STATUS_LABELS[lec.teacherReportStatus]}
-                            </p>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {lec.sentDate && (
+                                <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-semibold text-sky-800">
+                                  Sent {lec.sentDate}
+                                </span>
+                              )}
+                              {lec.teacherReportStatus && (
+                                <span className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold ${
+                                  lec.teacherReportStatus === 'approved'
+                                    ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                                    : lec.teacherReportStatus === 'argument'
+                                      ? 'border-amber-200 bg-amber-100 text-amber-900'
+                                      : 'border-rose-200 bg-rose-100 text-rose-800'
+                                }`}>
+                                  {TEACHER_REPORT_STATUS_LABELS[lec.teacherReportStatus]}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       );
