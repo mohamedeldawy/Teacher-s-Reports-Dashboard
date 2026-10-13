@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, X, LayoutGrid, Table, Activity } from 'lucide-react';
-import { FilterState } from '../types';
+import { FilterState, TEACHER_REPORT_STATUS_LABELS } from '../types';
 import { SearchableFilter } from './SearchableFilter';
 
 const STATUS_FILTER_OPTIONS = [
@@ -9,6 +9,17 @@ const STATUS_FILTER_OPTIONS = [
   'Pending Report',
   'Has Issue / Needs Follow-up',
 ];
+
+const TEACHER_REPORT_STATUS_OPTIONS = [
+  'all',
+  ...Object.values(TEACHER_REPORT_STATUS_LABELS),
+];
+
+const TEACHER_REPORT_STATUS_BY_LABEL: Record<string, FilterState['teacherReportStatus']> = {
+  [TEACHER_REPORT_STATUS_LABELS.approved]: 'approved',
+  [TEACHER_REPORT_STATUS_LABELS.argument]: 'argument',
+  [TEACHER_REPORT_STATUS_LABELS.rejected]: 'rejected',
+};
 
 interface FiltersBarProps {
   filters: FilterState;
@@ -32,6 +43,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
     filters.grade !== 'all' ||
     filters.teacher !== 'all' ||
     filters.status !== 'all' ||
+    filters.teacherReportStatus !== 'all' ||
     filters.searchQuery.trim() !== '';
 
   const handleClearFilters = () => {
@@ -40,6 +52,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
       grade: 'all',
       teacher: 'all',
       status: 'all',
+      teacherReportStatus: 'all',
       searchQuery: '',
     });
   };
@@ -90,7 +103,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
       </div>
 
       {/* Bottom row: Detailed Dropdown Filters & Search */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 pt-3">
         <SearchableFilter
           id="filter-subject-select"
           label="All Subjects"
@@ -159,6 +172,22 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             onChangeFilters({ status: statusValues[status] || 'all' });
           }}
         />
+
+        <SearchableFilter
+          id="filter-teacher-report-status-select"
+          label="All Teacher Responses"
+          value={
+            filters.teacherReportStatus === 'all'
+              ? 'all'
+              : TEACHER_REPORT_STATUS_LABELS[filters.teacherReportStatus]
+          }
+          options={TEACHER_REPORT_STATUS_OPTIONS}
+          onChange={value => {
+            onChangeFilters({
+              teacherReportStatus: TEACHER_REPORT_STATUS_BY_LABEL[value] || 'all',
+            });
+          }}
+        />
       </div>
 
       {/* Active filters badge row */}
@@ -205,6 +234,17 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
                 <button
                   onClick={() => onChangeFilters({ status: 'all' })}
                   className="hover:text-amber-900 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.teacherReportStatus !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Teacher response: {TEACHER_REPORT_STATUS_LABELS[filters.teacherReportStatus]}
+                <button
+                  onClick={() => onChangeFilters({ teacherReportStatus: 'all' })}
+                  className="hover:text-indigo-900 cursor-pointer"
                 >
                   <X className="w-3 h-3" />
                 </button>

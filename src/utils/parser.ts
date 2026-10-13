@@ -1,4 +1,4 @@
-import { TeacherCourse, LectureReport, LectureStatus } from '../types';
+import { TeacherCourse, LectureReport, LectureStatus, TeacherReportStatus } from '../types';
 
 export function isArabic(text: string): boolean {
   return /[\u0600-\u06FF]/.test(text);
@@ -240,7 +240,7 @@ function isHeaderRow(cells: string[]): boolean {
 }
 
 function getTeacherGradeReportGroupWidth(cells: string[]): number | null {
-  for (const groupWidth of [5, 4]) {
+  for (const groupWidth of [7, 6, 5, 4]) {
     if (cells.length < groupWidth || cells.length % groupWidth !== 0) continue;
 
     let matchesHeader = true;
@@ -250,12 +250,20 @@ function getTeacherGradeReportGroupWidth(cells: string[]): number | null {
         cells[i + 1]?.trim().toLowerCase() === 'teacher' &&
         cells[i + 2]?.trim().toLowerCase() === 'grade' &&
         cells[i + 3]?.trim().toLowerCase() === 'report';
-      const hasFileUrlColumn = groupWidth === 4 ||
-        ['file url', 'file link', 'report url', 'url', 'link'].includes(
-          cells[i + 4]?.trim().toLowerCase()
-        );
+      const extraHeaders = cells.slice(i + 4, i + groupWidth).map(header => header.trim().toLowerCase());
+      const hasSupportedExtraColumns = extraHeaders.every(header =>
+        ['file url', 'file link', 'report url', 'url', 'link'].includes(header) ||
+        header.includes('date') ||
+        header.includes('sent') ||
+        header.includes('status') ||
+        header.includes('state') ||
+        header.includes('conversation') ||
+        header.includes('approval') ||
+        header.includes('response') ||
+        header.includes('feedback')
+      );
 
-      if (!hasExpectedColumns || !hasFileUrlColumn) {
+      if (!hasExpectedColumns || !hasSupportedExtraColumns) {
         matchesHeader = false;
         break;
       }
@@ -265,6 +273,60 @@ function getTeacherGradeReportGroupWidth(cells: string[]): number | null {
   }
 
   return null;
+}
+
+function getReportColumnIndexes(headers: string[], start: number, groupWidth: number): {
+  sentDate?: number;
+  teacherReportStatus?: number;
+  fileUrl?: number;
+} {
+  const result: { sentDate?: number; teacherReportStatus?: number; fileUrl?: number } = {};
+
+  for (let index = start + 4; index < start + groupWidth; index++) {
+    const header = headers[index]?.trim().toLowerCase() || '';
+    if (['file url', 'file link', 'report url', 'url', 'link'].includes(header)) {
+      result.fileUrl = index;
+    } else if (header.includes('date') || header.includes('sent')) {
+      result.sentDate = index;
+    } else if (
+      header.includes('status') ||
+      header.includes('state') ||
+      header.includes('conversation') ||
+      header.includes('approval') ||
+      header.includes('response') ||
+      header.includes('feedback')
+    ) {
+      result.teacherReportStatus = index;
+    }
+  }
+
+  return result;
+}
+
+function parseTeacherReportStatus(value: string): TeacherReportStatus | undefined {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (
+    normalized.includes('reject') ||
+    normalized.includes('رفض') ||
+    normalized.includes('مرفوض')
+  ) return 'rejected';
+  if (
+    normalized.includes('argument') ||
+    normalized.includes('dispute') ||
+    normalized.includes('objection') ||
+    normalized.includes('اعتراض') ||
+    normalized.includes('جدل') ||
+    normalized.includes('نقاش')
+  ) return 'argument';
+  if (
+    normalized.includes('approv') ||
+    normalized.includes('accept') ||
+    normalized.includes('موافق') ||
+    normalized.includes('اعتماد') ||
+    normalized.includes('مقبول')
+  ) return 'approved';
+  return undefined;
 }
 
 function isTeacherGradeReportHeader(cells: string[]): boolean {
@@ -278,14 +340,17 @@ function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
   const courseMap = new Map<string, TeacherCourse>();
   const lectureSet = new Set<string>();
   let activeCourses: Array<TeacherCourse | undefined> = [];
+  let activeHeaders: string[] = [];
 
   for (const row of rows) {
     if (isTeacherGradeReportHeader(row)) {
       activeCourses = new Array<TeacherCourse | undefined>(row.length / groupWidth);
+      activeHeaders = row;
       continue;
     }
 
     for (let column = 0, group = 0; column < row.length; column += groupWidth, group++) {
+      const columnIndexes = getReportColumnIndexes(activeHeaders, group * groupWidth, groupWidth);
       const rawLectureId = row[column]?.trim() || '';
       if (!rawLectureId) continue;
       const lectureId = normalizeLectureId(rawLectureId);
@@ -321,11 +386,18 @@ function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
       const reportValue = row[column + 3]?.trim() || '';
       const reportUrl = getGoogleDrivePreviewUrl(reportValue) ? reportValue : '';
       const note = reportUrl ? '' : reportValue;
-      const fileUrl = reportUrl || (groupWidth === 5 ? row[column + 4]?.trim() || '' : '');
+      const fileUrl = reportUrl || (columnIndexes.fileUrl === undefined ? '' : row[columnIndexes.fileUrl]?.trim() || '');
+      const sentDate = columnIndexes.sentDate === undefined
+        ? undefined
+        : row[columnIndexes.sentDate]?.trim() || undefined;
       course.lectures[lectureId] = {
         lectureId,
         note,
         status: fileUrl ? 'completed' : detectLectureStatus(note),
+        sentDate,
+        teacherReportStatus: columnIndexes.teacherReportStatus === undefined
+          ? undefined
+          : parseTeacherReportStatus(row[columnIndexes.teacherReportStatus] || ''),
         fileUrl: fileUrl || undefined,
         timestamp: note ? 'Recently submitted' : undefined,
       };
@@ -532,7 +604,7 @@ export function exportCoursesToCsv(courses: TeacherCourse[], lectureList: string
   // The Report cell contains either a Drive URL or the plain-text report.
   const headerParts: string[] = [];
   courses.forEach(() => {
-    headerParts.push('Lectures', 'Teacher', 'Grade', 'Report');
+    headerParts.push('Lectures', 'Teacher', 'Grade', 'Report', 'Date Sent', 'Teacher Report Status');
   });
   const lines: string[] = [headerParts.join(',')];
 
@@ -548,7 +620,11 @@ export function exportCoursesToCsv(courses: TeacherCourse[], lectureList: string
       const note = c.lectures[lecId]?.note || '';
       const fileUrl = c.lectures[lecId]?.fileUrl || '';
       const reportValue = fileUrl || note;
-      rowParts.push(reportValue ? `"${reportValue.replace(/"/g, '""')}"` : '');
+      rowParts.push(
+        reportValue ? `"${reportValue.replace(/"/g, '""')}"` : '',
+        c.lectures[lecId]?.sentDate ? `"${c.lectures[lecId].sentDate.replace(/"/g, '""')}"` : '',
+        c.lectures[lecId]?.teacherReportStatus || ''
+      );
     });
     lines.push(rowParts.join(','));
   });

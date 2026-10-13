@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, AlertTriangle, Eye, User, Sparkles } from 'lucide-react';
-import { TeacherCourse, LectureReport } from '../types';
+import { TeacherCourse, LectureReport, TEACHER_REPORT_STATUS_LABELS } from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
 
 interface ReportMatrixViewProps {
@@ -154,6 +154,11 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                     const noteText = lectureReport?.note?.trim() || (lectureReport?.fileUrl ? 'View report file' : '');
                     const isNoteArabic = isArabic(noteText);
                     const status = lectureReport?.status || (hasNote ? 'completed' : 'pending');
+                    const reportMetadata = [
+                      lectureReport?.sentDate && `Sent: ${lectureReport.sentDate}`,
+                      lectureReport?.teacherReportStatus &&
+                        TEACHER_REPORT_STATUS_LABELS[lectureReport.teacherReportStatus],
+                    ].filter(Boolean).join(' · ');
 
                     if (compactMode) {
                       return (
@@ -161,7 +166,8 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                           key={lecId}
                           onClick={() => onSelectLecture(course, lecId)}
                           className="p-1 text-center border-r border-slate-200 cursor-pointer hover:scale-105 transition-transform"
-                          title={hasNote ? `${course.teacher} - ${lecId}: ${noteText}` : undefined}
+                          title={[hasNote ? `${course.teacher} - ${lecId}: ${noteText}` : '', reportMetadata]
+                            .filter(Boolean).join(' · ') || undefined}
                         >
                           <div
                             className={`h-8 rounded flex items-center justify-center text-[10px] font-medium border ${
@@ -200,7 +206,7 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                               : 'bg-slate-50/60 border-slate-200 text-slate-400 hover:bg-slate-100 hover:border-slate-300'
                           }`}
                         >
-                          {hasNote ? (
+                          {hasNote || reportMetadata ? (
                             <div className="flex flex-col h-full justify-between gap-1">
                               <div className="flex items-center justify-between">
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
@@ -214,15 +220,22 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                                 <Eye className="w-3 h-3 text-slate-400 opacity-0 group-hover/cell:opacity-100 transition-opacity" />
                               </div>
 
-                              <p
-                                dir={isNoteArabic ? 'rtl' : 'ltr'}
-                                className={`text-[11px] leading-tight line-clamp-2 font-medium ${
-                                  isNoteArabic ? 'text-right' : 'text-left'
-                                } text-slate-800`}
-                                title={noteText}
-                              >
-                                {noteText}
-                              </p>
+                              {hasNote && (
+                                <p
+                                  dir={isNoteArabic ? 'rtl' : 'ltr'}
+                                  className={`text-[11px] leading-tight line-clamp-2 font-medium ${
+                                    isNoteArabic ? 'text-right' : 'text-left'
+                                  } text-slate-800`}
+                                  title={noteText}
+                                >
+                                  {noteText}
+                                </p>
+                              )}
+                              {reportMetadata && (
+                                <p className="text-[9px] leading-tight text-slate-600">
+                                  {reportMetadata}
+                                </p>
+                              )}
                             </div>
                           ) : null}
                         </div>

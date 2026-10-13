@@ -7,7 +7,12 @@ import { TeacherCardsView } from './components/TeacherCardsView';
 import { RecentUpdatesFeed } from './components/RecentUpdatesFeed';
 import { LectureModal } from './components/LectureModal';
 import { ImportModal } from './components/ImportModal';
-import { TeacherCourse, FilterState, LectureStatus, LectureReport } from './types';
+import {
+  TeacherCourse,
+  FilterState,
+  LectureStatus,
+  LectureReport,
+} from './types';
 import {
   getGoogleDrivePreviewUrl,
   hasLectureReport,
@@ -41,6 +46,13 @@ function matchesLectureStatus(lecture: LectureReport, status: FilterState['statu
   return true;
 }
 
+function matchesTeacherReportStatus(
+  lecture: LectureReport,
+  status: FilterState['teacherReportStatus']
+): boolean {
+  return status === 'all' || lecture.teacherReportStatus === status;
+}
+
 function isLocalLectureEdits(value: unknown): value is LocalLectureEdits {
   if (!isRecord(value)) return false;
 
@@ -54,7 +66,12 @@ function isLocalLectureEdits(value: unknown): value is LocalLectureEdits {
       isLectureStatus(lecture.status) &&
       (lecture.fileUrl === undefined || typeof lecture.fileUrl === 'string') &&
       (lecture.timestamp === undefined || typeof lecture.timestamp === 'string') &&
-      (lecture.updatedBy === undefined || typeof lecture.updatedBy === 'string')
+      (lecture.updatedBy === undefined || typeof lecture.updatedBy === 'string') &&
+      (lecture.sentDate === undefined || typeof lecture.sentDate === 'string') &&
+      (lecture.teacherReportStatus === undefined ||
+        lecture.teacherReportStatus === 'approved' ||
+        lecture.teacherReportStatus === 'argument' ||
+        lecture.teacherReportStatus === 'rejected')
     );
   });
 }
@@ -74,7 +91,11 @@ function mergeLocalLectureEdits(
       const currentLecture = currentCourse?.lectures[lectureId];
 
       if (localEdit) {
-        lectures[lectureId] = localEdit;
+        lectures[lectureId] = {
+          ...localEdit,
+          sentDate: latestLecture.sentDate,
+          teacherReportStatus: latestLecture.teacherReportStatus,
+        };
       } else if (
         currentLecture &&
         currentLecture.note === latestLecture.note &&
@@ -108,6 +129,7 @@ export default function App() {
     grade: 'all',
     teacher: 'all',
     status: 'all',
+    teacherReportStatus: 'all',
     searchQuery: '',
     viewMode: 'report_matrix',
   });
@@ -237,7 +259,13 @@ export default function App() {
       }
 
       const lectures = Object.values(c.lectures) as LectureReport[];
-      if (filters.status !== 'all' && !lectures.some(lecture => matchesLectureStatus(lecture, filters.status))) {
+      const matchesSelectedStatuses = (lecture: LectureReport) =>
+        matchesLectureStatus(lecture, filters.status) &&
+        matchesTeacherReportStatus(lecture, filters.teacherReportStatus);
+      if (
+        (filters.status !== 'all' || filters.teacherReportStatus !== 'all') &&
+        !lectures.some(matchesSelectedStatuses)
+      ) {
         return false;
       }
 
@@ -250,7 +278,7 @@ export default function App() {
         const matchesRaw = c.rawHeader.toLowerCase().includes(query);
         const matchesNote = lectures.some(
           lecture =>
-            matchesLectureStatus(lecture, filters.status) &&
+            matchesSelectedStatuses(lecture) &&
             (lecture.note.toLowerCase().includes(query) ||
               Boolean(lecture.fileUrl?.toLowerCase().includes(query)))
         );
@@ -265,12 +293,13 @@ export default function App() {
   }, [courses, filters]);
 
   const visibleCourses = useMemo(() => {
-    if (filters.status === 'all') return filteredCourses;
+    if (filters.status === 'all' && filters.teacherReportStatus === 'all') return filteredCourses;
 
     return filteredCourses.map(course => {
       const lectures = Object.fromEntries(
         Object.entries(course.lectures).filter(([, lecture]) =>
-          matchesLectureStatus(lecture, filters.status)
+          matchesLectureStatus(lecture, filters.status) &&
+          matchesTeacherReportStatus(lecture, filters.teacherReportStatus)
         )
       );
 
@@ -279,15 +308,15 @@ export default function App() {
         lectures,
       };
     });
-  }, [filteredCourses, filters.status]);
+  }, [filteredCourses, filters.status, filters.teacherReportStatus]);
 
   const visibleLectureList = useMemo(() => {
-    if (filters.status === 'all') return lectureList;
+    if (filters.status === 'all' && filters.teacherReportStatus === 'all') return lectureList;
     const visibleIds = new Set(
       visibleCourses.flatMap(course => Object.keys(course.lectures))
     );
     return lectureList.filter(lectureId => visibleIds.has(lectureId));
-  }, [filters.status, lectureList, visibleCourses]);
+  }, [filters.status, filters.teacherReportStatus, lectureList, visibleCourses]);
 
   // Handle saving an individual lecture report
   const handleSaveLecture = (
@@ -306,6 +335,8 @@ export default function App() {
         lectureId,
         note: fileUrl ? '' : note,
         status: fileUrl ? 'completed' : note.trim() ? status : 'pending',
+        sentDate: course.lectures[lectureId]?.sentDate,
+        teacherReportStatus: course.lectures[lectureId]?.teacherReportStatus,
         fileUrl,
         timestamp: note.trim() ? 'Just updated' : undefined,
       };
@@ -393,6 +424,7 @@ export default function App() {
         grade: 'all',
         teacher: 'all',
         status: 'all',
+        teacherReportStatus: 'all',
         searchQuery: '',
         viewMode: 'report_matrix',
       });

@@ -1,9 +1,18 @@
 export type LectureStatus = 'completed' | 'pending' | 'issue';
+export type TeacherReportStatus = 'approved' | 'argument' | 'rejected';
+
+export const TEACHER_REPORT_STATUS_LABELS: Record<TeacherReportStatus, string> = {
+  approved: 'Approved by the teacher',
+  argument: 'Argument from the teacher',
+  rejected: 'Rejected by the teacher',
+};
 
 export interface LectureReport {
   lectureId: string; // e.g. "L1", "L2"
   note: string;
   status: LectureStatus;
+  sentDate?: string;
+  teacherReportStatus?: TeacherReportStatus;
   fileUrl?: string;
   timestamp?: string;
   updatedBy?: string;
@@ -28,6 +37,7 @@ export interface FilterState {
   grade: string;
   teacher: string;
   status: 'all' | 'has_report' | 'pending' | 'issue';
+  teacherReportStatus: 'all' | TeacherReportStatus;
   searchQuery: string;
   viewMode: 'report_matrix' | 'teacher_cards' | 'updates_feed';
 }

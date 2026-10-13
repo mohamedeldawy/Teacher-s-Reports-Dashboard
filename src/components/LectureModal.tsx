@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, Clock, AlertTriangle, MessageSquare, Trash2, FileText } from 'lucide-react';
-import { TeacherCourse, LectureStatus } from '../types';
+import { TeacherCourse, LectureStatus, TEACHER_REPORT_STATUS_LABELS } from '../types';
 import { getGoogleDrivePreviewUrl, isArabic } from '../utils/parser';
 
 interface LectureModalProps {
@@ -36,8 +36,9 @@ export const LectureModal: React.FC<LectureModalProps> = ({
 
   if (!isOpen || !course || !lectureId) return null;
 
+  const lectureReport = course.lectures[lectureId];
   const isNoteArabic = isArabic(note);
-  const fileUrl = course.lectures[lectureId]?.fileUrl;
+  const fileUrl = lectureReport?.fileUrl;
   const filePreviewUrl = fileUrl ? getGoogleDrivePreviewUrl(fileUrl) : null;
   const handleSave = () => {
     onSaveLecture(course.id, lectureId, note.trim(), status);
@@ -84,6 +85,20 @@ export const LectureModal: React.FC<LectureModalProps> = ({
 
         {/* Modal Content */}
         <div className="p-5 space-y-4">
+          {(lectureReport?.sentDate || lectureReport?.teacherReportStatus) && (
+            <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-3 py-2 text-xs text-indigo-900">
+              {lectureReport?.sentDate && (
+                <p><span className="font-semibold">Report sent:</span> {lectureReport.sentDate}</p>
+              )}
+              {lectureReport?.teacherReportStatus && (
+                <p>
+                  <span className="font-semibold">Teacher response:</span>{' '}
+                  {TEACHER_REPORT_STATUS_LABELS[lectureReport.teacherReportStatus]}
+                </p>
+              )}
+            </div>
+          )}
+
           {fileUrl && (
             <section className="rounded-xl border border-slate-200 overflow-hidden">
               <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700">
