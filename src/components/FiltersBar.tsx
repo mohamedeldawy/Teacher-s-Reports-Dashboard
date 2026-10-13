@@ -27,6 +27,7 @@ interface FiltersBarProps {
   availableSubjects: string[];
   availableGrades: string[];
   availableTeachers: string[];
+  availableLectures: string[];
   totalResultsCount: number;
 }
 
@@ -36,12 +37,14 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
   availableSubjects,
   availableGrades,
   availableTeachers,
+  availableLectures,
   totalResultsCount,
 }) => {
   const hasActiveFilters =
     filters.subject !== 'all' ||
     filters.grade !== 'all' ||
     filters.teacher !== 'all' ||
+    filters.lecture !== 'all' ||
     filters.status !== 'all' ||
     filters.teacherReportStatus !== 'all' ||
     filters.searchQuery.trim() !== '';
@@ -51,6 +54,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
       subject: 'all',
       grade: 'all',
       teacher: 'all',
+      lecture: 'all',
       status: 'all',
       teacherReportStatus: 'all',
       searchQuery: '',
@@ -58,17 +62,17 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-4 mb-6">
+    <div className="relative z-50 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-6">
       {/* View Mode Switcher */}
       <div className="flex justify-end pb-3 border-b border-slate-100">
         {/* View Mode Switcher */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-lg shrink-0 self-start md:self-auto">
+        <div className="flex items-center bg-slate-100/90 p-1 rounded-xl ring-1 ring-slate-200/80 shrink-0 self-start md:self-auto">
           <button
             id="viewmode-matrix"
             onClick={() => onChangeFilters({ viewMode: 'report_matrix' })}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
               filters.viewMode === 'report_matrix'
-                ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                ? 'bg-slate-900 text-white shadow-sm font-semibold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -80,7 +84,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             onClick={() => onChangeFilters({ viewMode: 'teacher_cards' })}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
               filters.viewMode === 'teacher_cards'
-                ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                ? 'bg-slate-900 text-white shadow-sm font-semibold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -92,7 +96,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             onClick={() => onChangeFilters({ viewMode: 'updates_feed' })}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
               filters.viewMode === 'updates_feed'
-                ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                ? 'bg-slate-900 text-white shadow-sm font-semibold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -103,7 +107,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
       </div>
 
       {/* Bottom row: Detailed Dropdown Filters & Search */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 pt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8 gap-3 pt-3">
         <SearchableFilter
           id="filter-subject-select"
           label="All Subjects"
@@ -113,7 +117,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
         />
 
         {/* Search */}
-        <div className="relative lg:col-span-2">
+        <div className="relative 2xl:col-span-2">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             id="filter-search-input"
@@ -121,7 +125,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             placeholder="Search teacher, subject, report, date, or response..."
             value={filters.searchQuery}
             onChange={e => onChangeFilters({ searchQuery: e.target.value })}
-            className="w-full pl-9 pr-8 py-2 rounded-lg text-xs bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition"
+            className="w-full pl-9 pr-8 py-2 rounded-lg text-xs bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 focus:bg-white transition"
           />
           {filters.searchQuery && (
             <button
@@ -147,6 +151,14 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
           value={filters.teacher}
           options={['all', ...availableTeachers]}
           onChange={teacher => onChangeFilters({ teacher })}
+        />
+
+        <SearchableFilter
+          id="filter-lecture-select"
+          label="All Lectures"
+          value={filters.lecture}
+          options={['all', ...availableLectures]}
+          onChange={lecture => onChangeFilters({ lecture })}
         />
 
         <SearchableFilter
@@ -223,6 +235,17 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
                 <button
                   onClick={() => onChangeFilters({ teacher: 'all' })}
                   className="hover:text-purple-900 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.lecture !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200">
+                Lecture: {filters.lecture}
+                <button
+                  onClick={() => onChangeFilters({ lecture: 'all' })}
+                  className="hover:text-cyan-950 cursor-pointer"
                 >
                   <X className="w-3 h-3" />
                 </button>
