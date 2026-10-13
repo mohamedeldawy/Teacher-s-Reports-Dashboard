@@ -55,11 +55,11 @@ export const LectureModal: React.FC<LectureModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
       <div
-        className={`bg-white rounded-2xl ${filePreviewUrl ? 'max-w-5xl' : 'max-w-lg'} w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all`}
+        className={`bg-white rounded-2xl ${filePreviewUrl ? 'max-w-6xl max-h-[calc(100dvh-2rem)] flex flex-col' : 'max-w-lg'} w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all`}
         onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="shrink-0 px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
               {lectureId}
@@ -84,17 +84,26 @@ export const LectureModal: React.FC<LectureModalProps> = ({
         </div>
 
         {/* Modal Content */}
-        <div className="p-5 space-y-4">
+        <div className={`p-5 space-y-4 ${filePreviewUrl ? 'min-h-0 overflow-y-auto' : ''}`}>
           {(lectureReport?.sentDate || lectureReport?.teacherReportStatus) && (
-            <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-3 py-2 text-xs text-indigo-900">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900">
               {lectureReport?.sentDate && (
-                <p><span className="font-semibold">Report sent:</span> {lectureReport.sentDate}</p>
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 font-semibold text-sky-800">
+                  <Clock className="h-3.5 w-3.5" />
+                  Report sent {lectureReport.sentDate}
+                </span>
               )}
               {lectureReport?.teacherReportStatus && (
-                <p>
-                  <span className="font-semibold">Teacher response:</span>{' '}
+                <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-semibold ${
+                  lectureReport.teacherReportStatus === 'approved'
+                    ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                    : lectureReport.teacherReportStatus === 'argument'
+                      ? 'border-amber-200 bg-amber-100 text-amber-900'
+                      : 'border-rose-200 bg-rose-100 text-rose-800'
+                }`}>
+                  <MessageSquare className="h-3.5 w-3.5" />
                   {TEACHER_REPORT_STATUS_LABELS[lectureReport.teacherReportStatus]}
-                </p>
+                </span>
               )}
             </div>
           )}
@@ -134,7 +143,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
                 <iframe
                   src={filePreviewUrl}
                   title={`${course.teacher} ${lectureId} report file`}
-                  className="block w-full h-[65vh] min-h-[360px] max-h-[720px] bg-slate-100"
+                  className="block w-full h-[min(46dvh,520px)] min-h-[240px] max-h-[520px] bg-slate-100"
                   allow="autoplay"
                   allowFullScreen
                   loading="eager"
@@ -220,7 +229,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+        <div className="shrink-0 px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
           <div>
             {note && (
               <button
