@@ -143,6 +143,7 @@ export default function App() {
     subject: 'all',
     grade: 'all',
     teacher: 'all',
+    lecture: 'all',
     status: 'all',
     teacherReportStatus: 'all',
     searchQuery: '',
@@ -328,12 +329,13 @@ export default function App() {
       }
 
       const lectures = Object.values(c.lectures) as LectureReport[];
-      const matchesSelectedStatuses = (lecture: LectureReport) =>
+      const matchesLectureFilters = (lecture: LectureReport) =>
+        (filters.lecture === 'all' || lecture.lectureId === filters.lecture) &&
         matchesLectureStatus(lecture, filters.status) &&
         matchesTeacherReportStatus(lecture, filters.teacherReportStatus);
       if (
-        (filters.status !== 'all' || filters.teacherReportStatus !== 'all') &&
-        !lectures.some(matchesSelectedStatuses)
+        (filters.lecture !== 'all' || filters.status !== 'all' || filters.teacherReportStatus !== 'all') &&
+        !lectures.some(matchesLectureFilters)
       ) {
         return false;
       }
@@ -347,7 +349,7 @@ export default function App() {
         const matchesRaw = c.rawHeader.toLowerCase().includes(query);
         const matchesNote = lectures.some(
           lecture =>
-            matchesSelectedStatuses(lecture) &&
+            matchesLectureFilters(lecture) &&
             (lecture.note.toLowerCase().includes(query) ||
               Boolean(lecture.fileUrl?.toLowerCase().includes(query)) ||
               Boolean(lecture.sentDate?.toLowerCase().includes(query)) ||
@@ -366,12 +368,28 @@ export default function App() {
     });
   }, [courses, filters]);
 
+  const statsCourses = useMemo(() => {
+    if (filters.lecture === 'all') return filteredCourses;
+
+    return filteredCourses.map(course => ({
+      ...course,
+      lectures: Object.fromEntries(
+        Object.entries(course.lectures).filter(([lectureId]) => lectureId === filters.lecture)
+      ),
+    }));
+  }, [filteredCourses, filters.lecture]);
+
   const visibleCourses = useMemo(() => {
-    if (filters.status === 'all' && filters.teacherReportStatus === 'all') return filteredCourses;
+    if (
+      filters.lecture === 'all' &&
+      filters.status === 'all' &&
+      filters.teacherReportStatus === 'all'
+    ) return filteredCourses;
 
     return filteredCourses.map(course => {
       const lectures = Object.fromEntries(
-        Object.entries(course.lectures).filter(([, lecture]) =>
+        Object.entries(course.lectures).filter(([lectureId, lecture]) =>
+          (filters.lecture === 'all' || lectureId === filters.lecture) &&
           matchesLectureStatus(lecture, filters.status) &&
           matchesTeacherReportStatus(lecture, filters.teacherReportStatus)
         )
@@ -382,15 +400,20 @@ export default function App() {
         lectures,
       };
     });
-  }, [filteredCourses, filters.status, filters.teacherReportStatus]);
+  }, [filteredCourses, filters.lecture, filters.status, filters.teacherReportStatus]);
 
   const visibleLectureList = useMemo(() => {
+    if (filters.lecture !== 'all') {
+      return visibleCourses.some(course => course.lectures[filters.lecture])
+        ? [filters.lecture]
+        : [];
+    }
     if (filters.status === 'all' && filters.teacherReportStatus === 'all') return lectureList;
     const visibleIds = new Set(
       visibleCourses.flatMap(course => Object.keys(course.lectures))
     );
     return lectureList.filter(lectureId => visibleIds.has(lectureId));
-  }, [filters.status, filters.teacherReportStatus, lectureList, visibleCourses]);
+  }, [filters.lecture, filters.status, filters.teacherReportStatus, lectureList, visibleCourses]);
 
   // Handle saving an individual lecture report
   const handleSaveLecture = (
@@ -469,7 +492,8 @@ export default function App() {
   // Handle CSV export
   const handleExportCsv = () => {
     try {
-      const csv = exportCoursesToCsv(filteredCourses, lectureList);
+      const exportLectureList = filters.lecture === 'all' ? lectureList : [filters.lecture];
+      const csv = exportCoursesToCsv(statsCourses, exportLectureList);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -531,6 +555,7 @@ export default function App() {
         subject: 'all',
         grade: 'all',
         teacher: 'all',
+        lecture: 'all',
         status: 'all',
         teacherReportStatus: 'all',
         searchQuery: '',
@@ -555,7 +580,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-teal-50/40 text-slate-900 flex flex-col font-sans selection:bg-teal-100 selection:text-teal-950">
       {/* Top Application Bar */}
       <Header
         onOpenImport={() => setIsImportOpen(true)}
@@ -571,7 +596,7 @@ export default function App() {
       <main className="flex-1 w-full px-3 sm:px-5 lg:px-6 py-5">
         {/* KPI & Summary Bar */}
         <StatsBar
-          filteredCourses={filteredCourses}
+          filteredCourses={statsCourses}
           onQuickFilterStatus={status => setFilters(prev => ({ ...prev, status }))}
           activeStatusFilter={filters.status}
         />
@@ -583,6 +608,7 @@ export default function App() {
           availableSubjects={availableSubjects}
           availableGrades={availableGrades}
           availableTeachers={availableTeachers}
+          availableLectures={lectureList}
           totalResultsCount={filteredCourses.length}
         />
 

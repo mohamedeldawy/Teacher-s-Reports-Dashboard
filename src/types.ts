@@ -36,6 +36,7 @@ export interface FilterState {
   subject: string;
   grade: string;
   teacher: string;
+  lecture: string;
   status: 'all' | 'has_report' | 'pending' | 'issue';
   teacherReportStatus: 'all' | TeacherReportStatus;
   searchQuery: string;

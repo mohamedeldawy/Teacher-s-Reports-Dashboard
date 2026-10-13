@@ -21,7 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   totalSubjects,
 }) => {
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <header className="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-30 shadow-xs">
       <div className="w-full px-3 sm:px-5 lg:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <img
@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="btn-import-spreadsheet"
             onClick={onOpenImport}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-xs cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-700 text-white hover:bg-teal-800 transition shadow-xs cursor-pointer active:scale-95"
             title="Paste or upload spreadsheet data"
           >
             <Upload className="w-3.5 h-3.5" />
