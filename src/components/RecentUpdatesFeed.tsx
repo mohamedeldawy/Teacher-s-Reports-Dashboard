@@ -1,6 +1,12 @@
 import React from 'react';
 import { Activity, CheckCircle2, AlertTriangle, Clock, ArrowRight } from 'lucide-react';
-import { FilterState, LectureStatus, TeacherCourse, LectureReport } from '../types';
+import {
+  FilterState,
+  LectureStatus,
+  TeacherCourse,
+  LectureReport,
+  TEACHER_REPORT_STATUS_LABELS,
+} from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
 
 interface RecentUpdatesFeedProps {
@@ -21,17 +27,21 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
     note: string;
     status: LectureStatus;
     timestamp?: string;
+    sentDate?: string;
+    teacherReportStatus?: LectureReport['teacherReportStatus'];
   }> = [];
 
   courses.forEach(course => {
     (Object.values(course.lectures) as LectureReport[]).forEach(lecture => {
-      if (hasLectureReport(lecture) || statusFilter !== 'all') {
+      if (hasLectureReport(lecture) || lecture.sentDate || lecture.teacherReportStatus || statusFilter !== 'all') {
         updates.push({
           course,
           lectureId: lecture.lectureId,
           note: lecture.note || (lecture.fileUrl ? 'View report file' : ''),
           status: lecture.status,
           timestamp: lecture.timestamp || (hasLectureReport(lecture) ? 'Recorded in Sheet' : undefined),
+          sentDate: lecture.sentDate,
+          teacherReportStatus: lecture.teacherReportStatus,
         });
       }
     });
@@ -128,6 +138,21 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 transition-transform group-hover:translate-x-1" />
                 </div>
               </div>
+
+              {(item.sentDate || item.teacherReportStatus) && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {item.sentDate && (
+                    <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-100 text-[11px]">
+                      Report sent: {item.sentDate}
+                    </span>
+                  )}
+                  {item.teacherReportStatus && (
+                    <span className="px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 text-[11px]">
+                      {TEACHER_REPORT_STATUS_LABELS[item.teacherReportStatus]}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Note body */}
               <div className="bg-white rounded-lg p-3 border border-slate-200 mt-2">

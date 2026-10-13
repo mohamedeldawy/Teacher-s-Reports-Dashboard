@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, CheckCircle2, ChevronRight } from 'lucide-react';
-import { TeacherCourse, LectureReport } from '../types';
+import { TeacherCourse, LectureReport, TEACHER_REPORT_STATUS_LABELS } from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
 
 interface TeacherCardsViewProps {
@@ -27,7 +27,9 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {courses.map(course => {
-        const reportedLectures = (Object.values(course.lectures) as LectureReport[]).filter(hasLectureReport);
+        const reportedLectures = (Object.values(course.lectures) as LectureReport[]).filter(
+          lecture => hasLectureReport(lecture) || lecture.sentDate || lecture.teacherReportStatus
+        );
         const courseLectureList = lectureList.filter(lectureId => course.lectures[lectureId]);
 
         return (
@@ -93,7 +95,12 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 font-bold'
                             : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-600'
                         }`}
-                        title={hasReport ? `${lecId}: ${reportText}` : undefined}
+                        title={[
+                          hasReport ? `${lecId}: ${reportText}` : lecId,
+                          lecture?.sentDate && `Sent: ${lecture.sentDate}`,
+                          lecture?.teacherReportStatus &&
+                            TEACHER_REPORT_STATUS_LABELS[lecture.teacherReportStatus],
+                        ].filter(Boolean).join(' · ')}
                       >
                         {hasReport && <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />}
                         <span>{lecId}</span>
@@ -140,6 +147,14 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                           >
                             {lec.note || (lec.fileUrl ? 'View report file' : '')}
                           </p>
+                          {(lec.sentDate || lec.teacherReportStatus) && (
+                            <p className="mt-1 text-[10px] text-slate-600">
+                              {lec.sentDate && `Sent: ${lec.sentDate}`}
+                              {lec.sentDate && lec.teacherReportStatus && ' · '}
+                              {lec.teacherReportStatus &&
+                                TEACHER_REPORT_STATUS_LABELS[lec.teacherReportStatus]}
+                            </p>
+                          )}
                         </div>
                       );
                     })}
