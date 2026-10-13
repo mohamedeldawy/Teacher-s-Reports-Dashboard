@@ -4,9 +4,9 @@ Elkheta's teacher lecture report dashboard for managing and visualizing teacher 
 
 ## Dashboard data
 
-The initial dashboard data is a snapshot of all 11 tabs in the [teacher reports Google Sheet](https://docs.google.com/spreadsheets/d/1PeUsRcrft0Cmu0G5z3xy8UCryJdOGuFg_UcBbLhgmAw/edit?usp=sharing). The tabs include subject and language variants, plus the high-school subject tabs. They contain repeating `Lectures, Teacher, Grade, Report` column groups; lecture rows are shown for each teacher section and report cells contain the submitted update or file name.
+The bundled dashboard data is a fallback snapshot of all 11 tabs in the [teacher reports Google Sheet](https://docs.google.com/spreadsheets/d/1PeUsRcrft0Cmu0G5z3xy8UCryJdOGuFg_UcBbLhgmAw/edit?usp=sharing). On startup, the dashboard syncs the latest published sheet data automatically. The tabs include subject and language variants, plus the high-school subject tabs. Their repeating teacher groups include `Lectures`, `Teacher`, `Grade`, `Date`, `Confirmation`, and `Report`; older layouts are also supported.
 
-Use **Sync Sheet** to fetch the latest data from all 11 tabs. The existing `Report` cell can contain either a Google Drive share URL or regular notes: Drive URLs open in the lecture preview, while plain text appears as the report note. Files must be accessible to the dashboard user. Imported data and dashboard edits are saved in this browser; **Reset** restores the bundled snapshot.
+Use **Sync Sheet** to fetch the latest data from all 11 tabs at any time. Report dates and teacher confirmations are shown with the report; confirmation values can be filtered by approval, argument, or rejection. The `Report` cell can contain either a Google Drive share URL or regular notes: Drive URLs open in the lecture preview, while plain text appears as the report note. Files must be accessible to the dashboard user. Imported data and dashboard edits are saved in this browser; **Reset** reloads the latest published sheet and discards local edits.
 
 Subject, grade, teacher, and status filters each include an option search. Empty report cells remain blank, and the summary cards include an attention count that filters the dashboard to lectures needing follow-up.
 

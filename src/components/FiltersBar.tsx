@@ -118,7 +118,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
           <input
             id="filter-search-input"
             type="text"
-            placeholder="Search teacher, subject, or report note..."
+            placeholder="Search teacher, subject, report, date, or response..."
             value={filters.searchQuery}
             onChange={e => onChangeFilters({ searchQuery: e.target.value })}
             className="w-full pl-9 pr-8 py-2 rounded-lg text-xs bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition"

@@ -155,16 +155,18 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
               )}
 
               {/* Note body */}
-              <div className="bg-white rounded-lg p-3 border border-slate-200 mt-2">
-                <p
-                  dir={isNoteArabic ? 'rtl' : 'ltr'}
-                  className={`text-sm text-slate-800 font-medium ${
-                    isNoteArabic ? 'text-right font-sans' : 'text-left'
-                  }`}
-                >
-                  {item.note}
-                </p>
-              </div>
+              {item.note && (
+                <div className="bg-white rounded-lg p-3 border border-slate-200 mt-2">
+                  <p
+                    dir={isNoteArabic ? 'rtl' : 'ltr'}
+                    className={`text-sm text-slate-800 font-medium ${
+                      isNoteArabic ? 'text-right font-sans' : 'text-left'
+                    }`}
+                  >
+                    {item.note}
+                  </p>
+                </div>
+              )}
             </div>
           );
         })}

@@ -133,20 +133,30 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                             </span>
                             <span
                               className={`text-[10px] font-medium ${
-                                lec.status === 'issue' ? 'text-amber-700' : 'text-emerald-600'
+                                lec.status === 'issue'
+                                  ? 'text-amber-700'
+                                  : hasLectureReport(lec)
+                                    ? 'text-emerald-600'
+                                    : 'text-indigo-600'
                               }`}
                             >
-                              {lec.status === 'issue' ? 'Attention' : 'Completed'}
+                              {lec.status === 'issue'
+                                ? 'Attention'
+                                : hasLectureReport(lec)
+                                  ? 'Completed'
+                                  : 'Response recorded'}
                             </span>
                           </div>
-                          <p
-                            dir={isArabicText ? 'rtl' : 'ltr'}
-                            className={`text-xs text-slate-800 ${
-                              isArabicText ? 'text-right' : 'text-left'
-                            }`}
-                          >
-                            {lec.note || (lec.fileUrl ? 'View report file' : '')}
-                          </p>
+                          {(lec.note || lec.fileUrl) && (
+                            <p
+                              dir={isArabicText ? 'rtl' : 'ltr'}
+                              className={`text-xs text-slate-800 ${
+                                isArabicText ? 'text-right' : 'text-left'
+                              }`}
+                            >
+                              {lec.note || 'View report file'}
+                            </p>
+                          )}
                           {(lec.sentDate || lec.teacherReportStatus) && (
                             <p className="mt-1 text-[10px] text-slate-600">
                               {lec.sentDate && `Sent: ${lec.sentDate}`}
