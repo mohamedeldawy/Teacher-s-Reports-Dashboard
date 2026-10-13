@@ -208,17 +208,19 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                         >
                           {hasNote || reportMetadata ? (
                             <div className="flex flex-col h-full justify-between gap-1">
-                              <div className="flex items-center justify-between">
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
-                                  {status === 'issue' ? (
-                                    <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                                  ) : (
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                                  )}
-                                  <span>{lecId}</span>
-                                </span>
-                                <Eye className="w-3 h-3 text-slate-400 opacity-0 group-hover/cell:opacity-100 transition-opacity" />
-                              </div>
+                              {hasNote && (
+                                <div className="flex items-center justify-between">
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                                    {status === 'issue' ? (
+                                      <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                                    ) : (
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                    )}
+                                    <span>{lecId}</span>
+                                  </span>
+                                  <Eye className="w-3 h-3 text-slate-400 opacity-0 group-hover/cell:opacity-100 transition-opacity" />
+                                </div>
+                              )}
 
                               {hasNote && (
                                 <p
@@ -254,7 +256,7 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
         <span>Showing {courses.length} teacher sections</span>
         <span className="flex items-center gap-1 text-slate-600">
           <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-          Current Google Sheet snapshot
+          Latest synced Google Sheet data
         </span>
       </div>
     </div>

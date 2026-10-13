@@ -240,30 +240,21 @@ function isHeaderRow(cells: string[]): boolean {
 }
 
 function getTeacherGradeReportGroupWidth(cells: string[]): number | null {
-  for (const groupWidth of [7, 6, 5, 4]) {
+  for (const groupWidth of [10, 9, 8, 7, 6, 5, 4]) {
     if (cells.length < groupWidth || cells.length % groupWidth !== 0) continue;
 
     let matchesHeader = true;
     for (let i = 0; i < cells.length; i += groupWidth) {
-      const hasExpectedColumns =
-        cells[i]?.trim().toLowerCase() === 'lectures' &&
-        cells[i + 1]?.trim().toLowerCase() === 'teacher' &&
-        cells[i + 2]?.trim().toLowerCase() === 'grade' &&
-        cells[i + 3]?.trim().toLowerCase() === 'report';
-      const extraHeaders = cells.slice(i + 4, i + groupWidth).map(header => header.trim().toLowerCase());
-      const hasSupportedExtraColumns = extraHeaders.every(header =>
-        ['file url', 'file link', 'report url', 'url', 'link'].includes(header) ||
-        header.includes('date') ||
-        header.includes('sent') ||
-        header.includes('status') ||
-        header.includes('state') ||
-        header.includes('conversation') ||
-        header.includes('approval') ||
-        header.includes('response') ||
-        header.includes('feedback')
-      );
+      const headers = cells.slice(i, i + groupWidth).map(header => header.trim().toLowerCase());
+      if (headers.every(header => !header)) continue;
 
-      if (!hasExpectedColumns || !hasSupportedExtraColumns) {
+      const hasRequiredColumns =
+        headers.filter(header => header === 'teacher').length === 1 &&
+        headers.filter(header => header === 'grade').length === 1 &&
+        headers.filter(header => header === 'report').length === 1;
+      const hasLectureColumn = !headers.some(header => header) || !headers[0] || headers[0] === 'lectures' || headers[0] === 'lecture';
+
+      if (!hasRequiredColumns || !hasLectureColumn) {
         matchesHeader = false;
         break;
       }
@@ -276,15 +267,35 @@ function getTeacherGradeReportGroupWidth(cells: string[]): number | null {
 }
 
 function getReportColumnIndexes(headers: string[], start: number, groupWidth: number): {
+  lecture: number;
+  teacher?: number;
+  grade?: number;
+  report?: number;
   sentDate?: number;
   teacherReportStatus?: number;
   fileUrl?: number;
 } {
-  const result: { sentDate?: number; teacherReportStatus?: number; fileUrl?: number } = {};
+  const result: {
+    lecture: number;
+    teacher?: number;
+    grade?: number;
+    report?: number;
+    sentDate?: number;
+    teacherReportStatus?: number;
+    fileUrl?: number;
+  } = { lecture: start };
 
-  for (let index = start + 4; index < start + groupWidth; index++) {
+  for (let index = start; index < start + groupWidth; index++) {
     const header = headers[index]?.trim().toLowerCase() || '';
-    if (['file url', 'file link', 'report url', 'url', 'link'].includes(header)) {
+    if (header === 'lectures' || header === 'lecture') {
+      result.lecture = index;
+    } else if (header === 'teacher') {
+      result.teacher = index;
+    } else if (header === 'grade') {
+      result.grade = index;
+    } else if (header === 'report') {
+      result.report = index;
+    } else if (['file url', 'file link', 'report url', 'url', 'link'].includes(header)) {
       result.fileUrl = index;
     } else if (header.includes('date') || header.includes('sent')) {
       result.sentDate = index;
@@ -294,7 +305,8 @@ function getReportColumnIndexes(headers: string[], start: number, groupWidth: nu
       header.includes('conversation') ||
       header.includes('approval') ||
       header.includes('response') ||
-      header.includes('feedback')
+      header.includes('feedback') ||
+      header.includes('confirm')
     ) {
       result.teacherReportStatus = index;
     }
@@ -351,15 +363,19 @@ function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
 
     for (let column = 0, group = 0; column < row.length; column += groupWidth, group++) {
       const columnIndexes = getReportColumnIndexes(activeHeaders, group * groupWidth, groupWidth);
-      const rawLectureId = row[column]?.trim() || '';
+      if (columnIndexes.teacher === undefined || columnIndexes.grade === undefined || columnIndexes.report === undefined) {
+        continue;
+      }
+
+      const rawLectureId = row[columnIndexes.lecture]?.trim() || '';
       if (!rawLectureId) continue;
       const lectureId = normalizeLectureId(rawLectureId);
 
       lectureSet.add(lectureId);
 
       const previousCourse = activeCourses[group];
-      const rawHeader = row[column + 1]?.trim() || previousCourse?.rawHeader || '';
-      const grade = row[column + 2]?.trim() || previousCourse?.grade || '';
+      const rawHeader = row[columnIndexes.teacher]?.trim() || previousCourse?.rawHeader || '';
+      const grade = row[columnIndexes.grade]?.trim() || previousCourse?.grade || '';
       if (!rawHeader || !grade) continue;
 
       const courseKey = `${rawHeader.toLowerCase()}::${grade.toLowerCase()}`;
@@ -383,7 +399,7 @@ function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
       }
       activeCourses[group] = course;
 
-      const reportValue = row[column + 3]?.trim() || '';
+      const reportValue = row[columnIndexes.report]?.trim() || '';
       const reportUrl = getGoogleDrivePreviewUrl(reportValue) ? reportValue : '';
       const note = reportUrl ? '' : reportValue;
       const fileUrl = reportUrl || (columnIndexes.fileUrl === undefined ? '' : row[columnIndexes.fileUrl]?.trim() || '');

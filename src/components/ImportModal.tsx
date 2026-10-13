@@ -106,11 +106,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         {/* Body */}
         <div className="p-6 space-y-4">
-          {/* Restore all bundled Google Sheet tabs */}
+          {/* Load the current published Google Sheet tabs */}
           <div className="flex items-center justify-between bg-emerald-50/60 border border-emerald-200 rounded-xl p-3">
             <div className="flex items-center gap-2 text-xs text-emerald-900">
               <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Restore the bundled snapshot of all Google Sheet tabs.</span>
+              <span>Load the latest published data from all Google Sheet tabs.</span>
             </div>
             <button
               type="button"
@@ -120,7 +120,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               }}
               className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer shrink-0 shadow-xs"
             >
-              Restore All Tabs
+              Load Latest Sheet
             </button>
           </div>
 

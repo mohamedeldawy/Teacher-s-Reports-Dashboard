@@ -12,6 +12,7 @@ import {
   FilterState,
   LectureStatus,
   LectureReport,
+  TEACHER_REPORT_STATUS_LABELS,
 } from './types';
 import {
   getGoogleDrivePreviewUrl,
@@ -120,6 +121,20 @@ function mergeLocalLectureEdits(
   });
 }
 
+async function fetchCurrentSheetTabs(): Promise<Array<{ name: string; csv: string }>> {
+  return Promise.all(INITIAL_SPREADSHEETS.map(async ({ name }) => {
+    const url = new URL(`https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq`);
+    url.searchParams.set('tqx', 'out:csv');
+    url.searchParams.set('sheet', name);
+    const response = await fetch(url, { cache: 'no-store' });
+    const contentType = response.headers.get('content-type') || '';
+    if (!response.ok || !contentType.includes('text/csv')) {
+      throw new Error(`Could not load "${name}" tab (HTTP ${response.status}).`);
+    }
+    return { name, csv: await response.text() };
+  }));
+}
+
 export default function App() {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [lectureList, setLectureList] = useState<string[]>([]);
@@ -150,42 +165,12 @@ export default function App() {
     }, 3500);
   };
 
-  // Initialize data on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const savedData = JSON.parse(stored) as {
-          courses?: TeacherCourse[];
-          allLectureIds?: string[];
-          localEdits?: unknown;
-        };
-        if (Array.isArray(savedData.courses) && Array.isArray(savedData.allLectureIds)) {
-          setCourses(savedData.courses);
-          setLectureList(savedData.allLectureIds);
-          if (isLocalLectureEdits(savedData.localEdits)) {
-            setLocalEdits(savedData.localEdits);
-          }
-          return;
-        }
-      }
-
-      const { courses: initialCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
-      setCourses(initialCourses);
-      setLectureList(allLectureIds);
-    } catch (e) {
-      console.error('Error loading initial data:', e);
-      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
-      setCourses(fallbackCourses);
-      setLectureList(allLectureIds);
-    }
-  }, []);
-
   const saveDashboardData = (
     updatedCourses: TeacherCourse[],
     updatedLectureIds: string[],
     updatedLocalEdits: LocalLectureEdits
   ): boolean => {
+    let saved = true;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         courses: updatedCourses,
@@ -194,14 +179,98 @@ export default function App() {
       }));
     } catch (e) {
       console.error('Error saving dashboard data:', e);
-      return false;
+      saved = false;
     }
 
     setCourses(updatedCourses);
     setLectureList(updatedLectureIds);
     setLocalEdits(updatedLocalEdits);
-    return true;
+    return saved;
   };
+
+  // Load cached data immediately, then sync the latest published sheet.
+  useEffect(() => {
+    let isCurrent = true;
+
+    const initializeDashboard = async () => {
+      let currentCourses: TeacherCourse[] = [];
+      let currentLectureIds: string[] = [];
+      let currentEdits: LocalLectureEdits = {};
+
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const savedData = JSON.parse(stored) as {
+            courses?: TeacherCourse[];
+            allLectureIds?: string[];
+            localEdits?: unknown;
+          };
+          if (Array.isArray(savedData.courses) && Array.isArray(savedData.allLectureIds)) {
+            currentCourses = savedData.courses;
+            currentLectureIds = savedData.allLectureIds;
+            if (isLocalLectureEdits(savedData.localEdits)) {
+              currentEdits = savedData.localEdits;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Could not load saved dashboard data:', error);
+      }
+
+      if (currentCourses.length === 0) {
+        const fallback = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
+        currentCourses = fallback.courses;
+        currentLectureIds = fallback.allLectureIds;
+      }
+
+      if (!isCurrent) return;
+      setCourses(currentCourses);
+      setLectureList(currentLectureIds);
+      setLocalEdits(currentEdits);
+      setIsRefreshingSheet(true);
+
+      try {
+        const tabs = await fetchCurrentSheetTabs();
+        const latest = parseSpreadsheetTabs(tabs);
+        if (latest.courses.length === 0) {
+          throw new Error('No teacher sections were found in the Google Sheet.');
+        }
+        if (!isCurrent) return;
+
+        let savedData: {
+          courses?: TeacherCourse[];
+          localEdits?: unknown;
+        } = {};
+        try {
+          const currentState = localStorage.getItem(STORAGE_KEY);
+          if (currentState) savedData = JSON.parse(currentState);
+        } catch (error) {
+          console.error('Could not read saved dashboard data before initial sheet sync:', error);
+        }
+        const savedCourses = Array.isArray(savedData.courses) ? savedData.courses : currentCourses;
+        const savedEdits = isLocalLectureEdits(savedData.localEdits) ? savedData.localEdits : currentEdits;
+        const mergedCourses = mergeLocalLectureEdits(latest.courses, savedCourses, savedEdits);
+
+        if (!saveDashboardData(mergedCourses, latest.allLectureIds, savedEdits)) {
+          showToast('Loaded the latest Google Sheet data, but browser storage could not be updated.');
+        }
+      } catch (error) {
+        console.error('Could not load the latest Google Sheet data:', error);
+        if (isCurrent) {
+          showToast(error instanceof Error
+            ? `Sheet sync failed: ${error.message}. Showing saved dashboard data.`
+            : 'Sheet sync failed. Showing saved dashboard data.');
+        }
+      } finally {
+        if (isCurrent) setIsRefreshingSheet(false);
+      }
+    };
+
+    void initializeDashboard();
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   // Available subjects from current dataset
   const availableSubjects = useMemo(() => {
@@ -280,7 +349,12 @@ export default function App() {
           lecture =>
             matchesSelectedStatuses(lecture) &&
             (lecture.note.toLowerCase().includes(query) ||
-              Boolean(lecture.fileUrl?.toLowerCase().includes(query)))
+              Boolean(lecture.fileUrl?.toLowerCase().includes(query)) ||
+              Boolean(lecture.sentDate?.toLowerCase().includes(query)) ||
+              Boolean(
+                lecture.teacherReportStatus &&
+                TEACHER_REPORT_STATUS_LABELS[lecture.teacherReportStatus].toLowerCase().includes(query)
+              ))
         );
 
         if (!matchesTeacher && !matchesSubject && !matchesGrade && !matchesRaw && !matchesNote) {
@@ -411,14 +485,48 @@ export default function App() {
     }
   };
 
-  // Reset to the bundled Google Sheet snapshot
+  const syncSheetData = async (preserveLocalEdits: boolean) => {
+    setIsRefreshingSheet(true);
+    try {
+      const tabs = await fetchCurrentSheetTabs();
+      const parsed = parseSpreadsheetTabs(tabs);
+      if (parsed.courses.length === 0) {
+        throw new Error('No teacher sections were found in the Google Sheet.');
+      }
+
+      let savedData: {
+        courses?: TeacherCourse[];
+        localEdits?: unknown;
+      } = {};
+      try {
+        const savedState = localStorage.getItem(STORAGE_KEY);
+        if (savedState) savedData = JSON.parse(savedState);
+      } catch (error) {
+        console.error('Could not read saved dashboard data before sheet sync:', error);
+      }
+      const currentCourses = Array.isArray(savedData.courses) ? savedData.courses : courses;
+      const currentEdits = isLocalLectureEdits(savedData.localEdits) ? savedData.localEdits : localEdits;
+      const latestCourses = preserveLocalEdits
+        ? mergeLocalLectureEdits(parsed.courses, currentCourses, currentEdits)
+        : parsed.courses;
+      const latestEdits = preserveLocalEdits ? currentEdits : {};
+
+      if (!saveDashboardData(latestCourses, parsed.allLectureIds, latestEdits)) {
+        showToast('Sheet synced, but browser storage could not be updated.');
+        return;
+      }
+      showToast(`Synced ${latestCourses.length} sections from ${tabs.length} sheet tabs.`);
+    } catch (error) {
+      console.error('Could not refresh Google Sheet data:', error);
+      showToast(error instanceof Error ? `Sheet sync failed: ${error.message}` : 'Sheet sync failed.');
+    } finally {
+      setIsRefreshingSheet(false);
+    }
+  };
+
+  // Reset to the current published Google Sheet data
   const handleResetData = () => {
     if (window.confirm('Reset all lecture reports back to the current Google Sheet snapshot?')) {
-      localStorage.removeItem(STORAGE_KEY);
-      const { courses: fallbackCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
-      setCourses(fallbackCourses);
-      setLectureList(allLectureIds);
-      setLocalEdits({});
       setFilters({
         subject: 'all',
         grade: 'all',
@@ -428,57 +536,16 @@ export default function App() {
         searchQuery: '',
         viewMode: 'report_matrix',
       });
-      showToast('Reset dashboard to the current Google Sheet snapshot');
+      void syncSheetData(false);
     }
   };
 
   const handleRestoreCurrentSheetData = () => {
-    const { courses: initialCourses, allLectureIds } = parseSpreadsheetTabs(INITIAL_SPREADSHEETS);
-    if (!saveDashboardData(initialCourses, allLectureIds, {})) {
-      showToast('Could not save the current sheet data in this browser.');
-      return;
-    }
-    showToast(`Loaded ${initialCourses.length} sections from ${INITIAL_SPREADSHEETS.length} sheet tabs.`);
+    void syncSheetData(false);
   };
 
   const handleRefreshSheetData = async () => {
-    setIsRefreshingSheet(true);
-    try {
-      const tabs = await Promise.all(INITIAL_SPREADSHEETS.map(async ({ name }) => {
-        const url = new URL(`https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq`);
-        url.searchParams.set('tqx', 'out:csv');
-        url.searchParams.set('sheet', name);
-        const response = await fetch(url, { cache: 'no-store' });
-        const contentType = response.headers.get('content-type') || '';
-        if (!response.ok || !contentType.includes('text/csv')) {
-          throw new Error(`Could not load "${name}" tab (HTTP ${response.status}).`);
-        }
-        return { name, csv: await response.text() };
-      }));
-      const { courses: parsedCourses, allLectureIds } = parseSpreadsheetTabs(tabs);
-      if (parsedCourses.length === 0) {
-        throw new Error('No teacher sections were found in the Google Sheet.');
-      }
-      const savedState = localStorage.getItem(STORAGE_KEY);
-      const savedData: {
-        courses?: TeacherCourse[];
-        localEdits?: unknown;
-      } = savedState ? JSON.parse(savedState) : {};
-      const currentCourses = Array.isArray(savedData.courses) ? savedData.courses : [];
-      const currentEdits = isLocalLectureEdits(savedData.localEdits) ? savedData.localEdits : {};
-      const latestCourses = mergeLocalLectureEdits(parsedCourses, currentCourses, currentEdits);
-      if (!saveDashboardData(latestCourses, allLectureIds, currentEdits)) {
-        showToast('Sheet refreshed, but browser storage could not be updated.');
-        return;
-      }
-
-      showToast(`Synced ${latestCourses.length} sections from ${tabs.length} sheet tabs.`);
-    } catch (error) {
-      console.error('Could not refresh Google Sheet data:', error);
-      showToast(error instanceof Error ? `Sheet sync failed: ${error.message}` : 'Sheet sync failed.');
-    } finally {
-      setIsRefreshingSheet(false);
-    }
+    await syncSheetData(true);
   };
 
   // Open modal for a specific lecture cell
