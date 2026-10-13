@@ -312,6 +312,19 @@ function getReportColumnIndexes(headers: string[], start: number, groupWidth: nu
     }
   }
 
+  if (
+    groupWidth === 6 &&
+    result.sentDate === undefined &&
+    result.grade !== undefined &&
+    result.teacherReportStatus !== undefined &&
+    result.report !== undefined
+  ) {
+    const dateColumn = result.grade + 1;
+    if (dateColumn + 1 === result.teacherReportStatus && dateColumn + 2 === result.report) {
+      result.sentDate = dateColumn;
+    }
+  }
+
   return result;
 }
 
