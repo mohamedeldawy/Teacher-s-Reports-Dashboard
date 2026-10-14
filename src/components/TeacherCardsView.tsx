@@ -2,6 +2,7 @@ import React from 'react';
 import { User, CheckCircle2, ChevronRight } from 'lucide-react';
 import { TeacherCourse, LectureReport, TEACHER_REPORT_STATUS_LABELS } from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
+import { TeacherAvatar } from './TeacherAvatar';
 
 interface TeacherCardsViewProps {
   courses: TeacherCourse[];
@@ -41,9 +42,10 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
             <div className="p-4 border-b border-slate-100 bg-gradient-to-b from-slate-50/70 to-white">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm border border-emerald-200 shadow-xs">
-                    {course.teacher.charAt(0)}
-                  </div>
+                  <TeacherAvatar
+                    teacherName={course.teacher}
+                    className="w-14 h-14 rounded-2xl"
+                  />
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 leading-snug">
                       {course.teacher}
