@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CheckCircle2, AlertTriangle, Eye, User, Sparkles } from 'lucide-react';
 import { TeacherCourse, LectureReport, TEACHER_REPORT_STATUS_LABELS } from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
+import { TeacherAvatar } from './TeacherAvatar';
 
 interface ReportMatrixViewProps {
   courses: TeacherCourse[];
@@ -111,9 +112,10 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                   {/* Sticky Teacher Info Cell */}
                   <td className={`sticky left-0 z-20 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} group-hover:bg-emerald-50 px-4 py-2.5 border-r border-b border-slate-200 shadow-[2px_0_5px_-3px_rgba(15,23,42,0.45)] transition-colors`}>
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-200 shadow-sm">
-                        {course.teacher.charAt(0)}
-                      </div>
+                      <TeacherAvatar
+                        teacherName={course.teacher}
+                        className="w-11 h-11 rounded-xl"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-slate-900 truncate" title={course.teacher}>
                           {course.teacher}

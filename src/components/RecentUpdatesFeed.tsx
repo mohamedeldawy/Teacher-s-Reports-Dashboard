@@ -8,6 +8,7 @@ import {
   TEACHER_REPORT_STATUS_LABELS,
 } from '../types';
 import { hasLectureReport, isArabic } from '../utils/parser';
+import { TeacherAvatar } from './TeacherAvatar';
 
 interface RecentUpdatesFeedProps {
   courses: TeacherCourse[];
@@ -121,7 +122,13 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
                     )}
                     {item.lectureId}
                   </span>
-                  <span className="font-bold text-slate-900 text-sm">{item.course.teacher}</span>
+                  <div className="flex items-center gap-2">
+                    <TeacherAvatar
+                      teacherName={item.course.teacher}
+                      className="w-10 h-10 rounded-full"
+                    />
+                    <span className="font-bold text-slate-900 text-sm">{item.course.teacher}</span>
+                  </div>
                   <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-medium border border-blue-100">
                     {item.course.grade}
                   </span>
