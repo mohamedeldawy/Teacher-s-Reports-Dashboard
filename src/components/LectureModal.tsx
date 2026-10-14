@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, Clock, AlertTriangle, MessageSquare, Trash2, FileText } from 'lucide-react';
 import { TeacherCourse, LectureStatus, TEACHER_REPORT_STATUS_LABELS } from '../types';
 import { getGoogleDrivePreviewUrl, isArabic } from '../utils/parser';
+import { TeacherAvatar } from './TeacherAvatar';
 
 interface LectureModalProps {
   isOpen: boolean;
@@ -60,13 +61,17 @@ export const LectureModal: React.FC<LectureModalProps> = ({
       >
         {/* Modal Header */}
         <div className="shrink-0 px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
               {lectureId}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">{course.teacher}</h3>
+            <TeacherAvatar
+              teacherName={course.teacher}
+              className="w-12 h-12 rounded-xl"
+            />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="truncate text-base font-bold text-slate-900">{course.teacher}</h3>
                 <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                   {course.grade}
                 </span>
