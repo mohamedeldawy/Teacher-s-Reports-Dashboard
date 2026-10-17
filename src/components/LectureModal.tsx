@@ -67,6 +67,8 @@ export const LectureModal: React.FC<LectureModalProps> = ({
             </div>
             <TeacherAvatar
               teacherName={course.teacher}
+              subject={course.subject}
+              grade={course.grade}
               className="w-12 h-12 rounded-xl"
             />
             <div className="min-w-0">

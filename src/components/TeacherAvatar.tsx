@@ -69,13 +69,24 @@ function normalizeName(name: string): string {
 
 interface TeacherAvatarProps {
   teacherName: string;
+  subject: string;
+  grade: string;
   className: string;
 }
 
-export const TeacherAvatar: React.FC<TeacherAvatarProps> = ({ teacherName, className }) => {
+export const TeacherAvatar: React.FC<TeacherAvatarProps> = ({
+  teacherName,
+  subject,
+  grade,
+  className,
+}) => {
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
   const normalizedName = normalizeName(teacherName);
-  const photoUrl = TEACHER_PHOTOS[normalizedName];
+  const isMohamedAlyMathJunior4 =
+    normalizedName === 'mohamed aly' &&
+    subject.toLowerCase().startsWith('math') &&
+    grade.toLowerCase() === 'junior 4';
+  const photoUrl = isMohamedAlyMathJunior4 ? undefined : TEACHER_PHOTOS[normalizedName];
   const showPhoto = Boolean(photoUrl && failedPhoto !== photoUrl);
   const isFemale = FEMALE_TEACHERS.has(normalizedName);
 

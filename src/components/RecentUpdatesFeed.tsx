@@ -125,6 +125,8 @@ export const RecentUpdatesFeed: React.FC<RecentUpdatesFeedProps> = ({
                   <div className="flex items-center gap-2">
                     <TeacherAvatar
                       teacherName={item.course.teacher}
+                      subject={item.course.subject}
+                      grade={item.course.grade}
                       className="w-10 h-10 rounded-full"
                     />
                     <span className="font-bold text-slate-900 text-sm">{item.course.teacher}</span>
