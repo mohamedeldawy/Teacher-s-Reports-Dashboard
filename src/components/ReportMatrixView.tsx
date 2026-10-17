@@ -114,6 +114,8 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                     <div className="flex min-w-0 items-center gap-2.5">
                       <TeacherAvatar
                         teacherName={course.teacher}
+                        subject={course.subject}
+                        grade={course.grade}
                         className="w-11 h-11 rounded-xl"
                       />
                       <div className="min-w-0 flex-1">

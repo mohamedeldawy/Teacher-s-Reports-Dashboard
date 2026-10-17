@@ -44,6 +44,8 @@ export const TeacherCardsView: React.FC<TeacherCardsViewProps> = ({
                 <div className="flex items-center gap-3">
                   <TeacherAvatar
                     teacherName={course.teacher}
+                    subject={course.subject}
+                    grade={course.grade}
                     className="w-14 h-14 rounded-2xl"
                   />
                   <div>
