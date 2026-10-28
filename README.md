@@ -8,7 +8,7 @@ The bundled dashboard data is a fallback snapshot of all 11 tabs in the [teacher
 
 Use **Sync Sheet** to fetch the latest data from all 11 tabs at any time. Report dates and teacher confirmations are shown with the report; confirmation values can be filtered by approval, argument, or rejection. The `Report` cell can contain either a Google Drive share URL or regular notes: Drive URLs open in the lecture preview, while plain text appears as the report note. Files must be accessible to the dashboard user. Imported data and dashboard edits are saved in this browser; **Reset** reloads the latest published sheet and discards local edits.
 
-Subject, grade, teacher, and status filters each include an option search. Empty report cells remain blank, and the summary cards include an attention count that filters the dashboard to lectures needing follow-up.
+Subject, grade, teacher, and status filters each include an option search. Empty report cells remain blank, and the summary cards include an attention count that filters the dashboard to lectures needing follow-up. In report-sheet tabs, report text alone does not mark a lecture as Attention; set its status cell to `Attention` or `Issue` to flag it.
 
 ## Why GitHub Shows Source Code (And How to Publish the Live App)
 

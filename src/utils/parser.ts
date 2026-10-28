@@ -354,6 +354,14 @@ function parseTeacherReportStatus(value: string): TeacherReportStatus | undefine
   return undefined;
 }
 
+function parseReportLectureStatus(value: string, hasReport: boolean): LectureStatus {
+  const normalized = value.trim().toLowerCase();
+  if (/^(attention|attn|issue|requires attention|needs attention|متابعة|مشكلة)$/.test(normalized)) {
+    return 'issue';
+  }
+  return hasReport ? 'completed' : 'pending';
+}
+
 function isTeacherGradeReportHeader(cells: string[]): boolean {
   return getTeacherGradeReportGroupWidth(cells) !== null;
 }
@@ -419,14 +427,17 @@ function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
       const sentDate = columnIndexes.sentDate === undefined
         ? undefined
         : row[columnIndexes.sentDate]?.trim() || undefined;
+      const teacherReportStatus = columnIndexes.teacherReportStatus === undefined
+        ? ''
+        : row[columnIndexes.teacherReportStatus] || '';
       course.lectures[lectureId] = {
         lectureId,
         note,
-        status: fileUrl ? 'completed' : detectLectureStatus(note),
+        status: parseReportLectureStatus(teacherReportStatus, Boolean(note || fileUrl)),
         sentDate,
         teacherReportStatus: columnIndexes.teacherReportStatus === undefined
           ? undefined
-          : parseTeacherReportStatus(row[columnIndexes.teacherReportStatus] || ''),
+          : parseTeacherReportStatus(teacherReportStatus),
         fileUrl: fileUrl || undefined,
         timestamp: note ? 'Recently submitted' : undefined,
       };

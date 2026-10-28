@@ -79,17 +79,12 @@ function isLocalLectureEdits(value: unknown): value is LocalLectureEdits {
 
 function mergeLocalLectureEdits(
   latestCourses: TeacherCourse[],
-  currentCourses: TeacherCourse[],
   localEdits: LocalLectureEdits
 ): TeacherCourse[] {
-  const currentCoursesById = new Map(currentCourses.map(course => [course.id, course]));
-
   return latestCourses.map(course => {
-    const currentCourse = currentCoursesById.get(course.id);
     const lectures = { ...course.lectures };
     Object.entries(lectures).forEach(([lectureId, latestLecture]) => {
       const localEdit = localEdits[course.id]?.[lectureId];
-      const currentLecture = currentCourse?.lectures[lectureId];
 
       if (localEdit) {
         lectures[lectureId] = {
@@ -97,13 +92,6 @@ function mergeLocalLectureEdits(
           sentDate: latestLecture.sentDate,
           teacherReportStatus: latestLecture.teacherReportStatus,
         };
-      } else if (
-        currentLecture &&
-        currentLecture.note === latestLecture.note &&
-        currentLecture.fileUrl === latestLecture.fileUrl
-      ) {
-        // Retain status-only edits made before local edit tracking was added.
-        lectures[lectureId] = { ...latestLecture, status: currentLecture.status };
       }
     });
 
@@ -248,9 +236,8 @@ export default function App() {
         } catch (error) {
           console.error('Could not read saved dashboard data before initial sheet sync:', error);
         }
-        const savedCourses = Array.isArray(savedData.courses) ? savedData.courses : currentCourses;
         const savedEdits = isLocalLectureEdits(savedData.localEdits) ? savedData.localEdits : currentEdits;
-        const mergedCourses = mergeLocalLectureEdits(latest.courses, savedCourses, savedEdits);
+        const mergedCourses = mergeLocalLectureEdits(latest.courses, savedEdits);
 
         if (!saveDashboardData(mergedCourses, latest.allLectureIds, savedEdits)) {
           showToast('Loaded the latest Google Sheet data, but browser storage could not be updated.');
@@ -519,7 +506,6 @@ export default function App() {
       }
 
       let savedData: {
-        courses?: TeacherCourse[];
         localEdits?: unknown;
       } = {};
       try {
@@ -528,10 +514,9 @@ export default function App() {
       } catch (error) {
         console.error('Could not read saved dashboard data before sheet sync:', error);
       }
-      const currentCourses = Array.isArray(savedData.courses) ? savedData.courses : courses;
       const currentEdits = isLocalLectureEdits(savedData.localEdits) ? savedData.localEdits : localEdits;
       const latestCourses = preserveLocalEdits
-        ? mergeLocalLectureEdits(parsed.courses, currentCourses, currentEdits)
+        ? mergeLocalLectureEdits(parsed.courses, currentEdits)
         : parsed.courses;
       const latestEdits = preserveLocalEdits ? currentEdits : {};
 
