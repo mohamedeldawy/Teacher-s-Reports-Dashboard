@@ -438,6 +438,9 @@ function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
       const reportUrl = getGoogleDrivePreviewUrl(reportValue) ? reportValue : '';
       const note = reportUrl ? '' : reportValue;
       const extraFileUrl = columnIndexes.fileUrl === undefined ? '' : row[columnIndexes.fileUrl]?.trim() || '';
+      const sentDate = columnIndexes.sentDate === undefined
+        ? undefined
+        : row[columnIndexes.sentDate]?.trim() || undefined;
       const attentionFileUrl = columnIndexes.attentionFileUrl === undefined ? '' : row[columnIndexes.attentionFileUrl]?.trim() || '';
       const doneFileUrl = columnIndexes.doneFileUrl === undefined ? '' : row[columnIndexes.doneFileUrl]?.trim() || '';
       const rawFileUrl = reportUrl || extraFileUrl;
