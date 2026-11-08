@@ -66,6 +66,8 @@ function isLocalLectureEdits(value: unknown): value is LocalLectureEdits {
       typeof lecture.note === 'string' &&
       isLectureStatus(lecture.status) &&
       (lecture.fileUrl === undefined || typeof lecture.fileUrl === 'string') &&
+      (lecture.attentionFileUrl === undefined || typeof lecture.attentionFileUrl === 'string') &&
+      (lecture.doneFileUrl === undefined || typeof lecture.doneFileUrl === 'string') &&
       (lecture.timestamp === undefined || typeof lecture.timestamp === 'string') &&
       (lecture.updatedBy === undefined || typeof lecture.updatedBy === 'string') &&
       (lecture.sentDate === undefined || typeof lecture.sentDate === 'string') &&
@@ -407,22 +409,36 @@ export default function App() {
     courseId: string,
     lectureId: string,
     note: string,
-    status: LectureStatus
+    status: LectureStatus,
+    attentionFileUrl: string,
+    doneFileUrl: string
   ) => {
     let savedLecture: LectureReport | undefined;
     const updatedCourses = courses.map(course => {
       if (course.id !== courseId) return course;
 
       const updatedLectures = { ...course.lectures };
-      const fileUrl = getGoogleDrivePreviewUrl(note) ? note : undefined;
+      const previousLecture = course.lectures[lectureId];
+      const normalizedAttentionUrl = attentionFileUrl.trim();
+      const normalizedDoneUrl = doneFileUrl.trim();
+      const legacyFileUrl = getGoogleDrivePreviewUrl(note) ? note.trim() : undefined;
+      const resolvedAttentionUrl = normalizedAttentionUrl || (status === 'issue' ? legacyFileUrl : undefined);
+      const resolvedDoneUrl = normalizedDoneUrl || (status !== 'issue' ? legacyFileUrl : undefined);
+      const resolvedStatus: LectureStatus = resolvedDoneUrl
+        ? 'completed'
+        : resolvedAttentionUrl
+          ? 'issue'
+          : note.trim() ? status : 'pending';
       const lecture: LectureReport = {
         lectureId,
-        note: fileUrl ? '' : note,
-        status: fileUrl ? 'completed' : note.trim() ? status : 'pending',
-        sentDate: course.lectures[lectureId]?.sentDate,
-        teacherReportStatus: course.lectures[lectureId]?.teacherReportStatus,
-        fileUrl,
-        timestamp: note.trim() ? 'Just updated' : undefined,
+        note: legacyFileUrl ? '' : note,
+        status: resolvedStatus,
+        sentDate: previousLecture?.sentDate,
+        teacherReportStatus: previousLecture?.teacherReportStatus,
+        fileUrl: resolvedDoneUrl || resolvedAttentionUrl,
+        attentionFileUrl: resolvedAttentionUrl || undefined,
+        doneFileUrl: resolvedDoneUrl || undefined,
+        timestamp: (note.trim() || resolvedAttentionUrl || resolvedDoneUrl) ? 'Just updated' : undefined,
       };
       savedLecture = lecture;
       updatedLectures[lectureId] = lecture;
