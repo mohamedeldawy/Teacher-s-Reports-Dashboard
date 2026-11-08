@@ -471,7 +471,7 @@ function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
   const courses = Array.from(courseMap.values()).map(course => {
     const lectureEntries = Object.values(course.lectures);
     const total = lectureEntries.length;
-    const completed = lectureEntries.filter(hasLectureReport).length;
+    const completed = lectureEntries.filter(lecture => lecture.status === 'completed' && hasLectureReport(lecture)).length;
 
     return {
       ...course,
@@ -599,7 +599,7 @@ export function parseSpreadsheet(csvRaw: string): {
   const courses: TeacherCourse[] = Array.from(courseMap.values()).map(course => {
     const lectureEntries = Object.values(course.lectures);
     const total = lectureEntries.length;
-    const completed = lectureEntries.filter(l => l.status === 'completed' || (l.note && l.note.trim().length > 0)).length;
+    const completed = lectureEntries.filter(l => l.status === 'completed' && hasLectureReport(l)).length;
     return {
       ...course,
       totalLectures: total,
