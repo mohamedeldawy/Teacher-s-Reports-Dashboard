@@ -15,6 +15,7 @@ export interface LectureReport {
   teacherReportStatus?: TeacherReportStatus;
   fileUrl?: string; // Legacy single-file field
   attentionFileUrl?: string;
+  attentionDate?: string;
   doneFileUrl?: string;
   timestamp?: string;
   updatedBy?: string;
