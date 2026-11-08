@@ -141,7 +141,13 @@ export const LectureModal: React.FC<LectureModalProps> = ({
             <div className="grid grid-cols-3 gap-2">
               <button type="button" onClick={() => setStatus('completed')} className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${status === 'completed' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}><CheckCircle2 className="w-3.5 h-3.5" /><span>Done / تمام</span></button>
               <button type="button" onClick={() => setStatus('pending')} className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${status === 'pending' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}><Clock className="w-3.5 h-3.5" /><span>Pending</span></button>
-              <button type="button" onClick={() => setStatus('issue')} className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${status === 'issue' ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}><AlertTriangle className="w-3.5 h-3.5" /><span>Attention</span></button>
+              <button type="button" onClick={() => {
+                if (doneFileUrl.trim() && !attentionFileUrl.trim()) {
+                  setAttentionFileUrl(doneFileUrl);
+                  setDoneFileUrl('');
+                }
+                setStatus('issue');
+              }} className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${status === 'issue' ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}><AlertTriangle className="w-3.5 h-3.5" /><span>Attention</span></button>
             </div>
             <p className="mt-1.5 text-[11px] text-slate-500">When both files are present, the lecture is marked Done while both previews remain available.</p>
           </div>
