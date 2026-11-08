@@ -99,7 +99,7 @@ function mergeLocalLectureEdits(
 
     const lectureEntries = Object.values(lectures);
     const total = lectureEntries.length;
-    const completed = lectureEntries.filter(hasLectureReport).length;
+    const completed = lectureEntries.filter(lecture => lecture.status === 'completed' && hasLectureReport(lecture)).length;
 
     return {
       ...course,
@@ -445,7 +445,7 @@ export default function App() {
 
       const lectureEntries = Object.values(updatedLectures) as LectureReport[];
       const total = lectureEntries.length;
-      const completed = lectureEntries.filter(hasLectureReport).length;
+      const completed = lectureEntries.filter(lecture => lecture.status === 'completed' && hasLectureReport(lecture)).length;
 
       return {
         ...course,
