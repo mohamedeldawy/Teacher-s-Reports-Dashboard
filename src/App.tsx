@@ -89,8 +89,18 @@ function mergeLocalLectureEdits(
       const localEdit = localEdits[course.id]?.[lectureId];
 
       if (localEdit) {
+        const latestDoneFileUrl = latestLecture.doneFileUrl || (
+          latestLecture.status === 'completed' ? latestLecture.fileUrl : undefined
+        );
+        const attentionFileUrl = localEdit.attentionFileUrl || (
+          localEdit.status === 'issue' ? localEdit.fileUrl : undefined
+        );
         lectures[lectureId] = {
           ...localEdit,
+          doneFileUrl: latestDoneFileUrl || localEdit.doneFileUrl,
+          attentionFileUrl,
+          fileUrl: latestDoneFileUrl || attentionFileUrl || localEdit.fileUrl,
+          status: latestDoneFileUrl ? 'completed' : localEdit.status,
           sentDate: latestLecture.sentDate,
           teacherReportStatus: latestLecture.teacherReportStatus,
         };
