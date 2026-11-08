@@ -67,6 +67,7 @@ function isLocalLectureEdits(value: unknown): value is LocalLectureEdits {
       isLectureStatus(lecture.status) &&
       (lecture.fileUrl === undefined || typeof lecture.fileUrl === 'string') &&
       (lecture.attentionFileUrl === undefined || typeof lecture.attentionFileUrl === 'string') &&
+      (lecture.attentionDate === undefined || typeof lecture.attentionDate === 'string') &&
       (lecture.doneFileUrl === undefined || typeof lecture.doneFileUrl === 'string') &&
       (lecture.timestamp === undefined || typeof lecture.timestamp === 'string') &&
       (lecture.updatedBy === undefined || typeof lecture.updatedBy === 'string') &&
@@ -99,8 +100,10 @@ function mergeLocalLectureEdits(
           ...localEdit,
           doneFileUrl: latestDoneFileUrl || localEdit.doneFileUrl,
           attentionFileUrl,
+          attentionDate: localEdit.attentionDate,
           fileUrl: latestDoneFileUrl || attentionFileUrl || localEdit.fileUrl,
-          status: latestDoneFileUrl ? 'completed' : localEdit.status,
+          // Keep the dashboard's manually selected status; a sheet report alone is not a status change.
+          status: localEdit.status,
           sentDate: latestLecture.sentDate,
           teacherReportStatus: latestLecture.teacherReportStatus,
         };
@@ -421,6 +424,7 @@ export default function App() {
     note: string,
     status: LectureStatus,
     attentionFileUrl: string,
+    attentionDate: string,
     doneFileUrl: string
   ) => {
     let savedLecture: LectureReport | undefined;
@@ -434,11 +438,7 @@ export default function App() {
       const legacyFileUrl = getGoogleDrivePreviewUrl(note) ? note.trim() : undefined;
       const resolvedAttentionUrl = normalizedAttentionUrl || (status === 'issue' ? legacyFileUrl : undefined);
       const resolvedDoneUrl = normalizedDoneUrl || (status !== 'issue' ? legacyFileUrl : undefined);
-      const resolvedStatus: LectureStatus = resolvedDoneUrl
-        ? 'completed'
-        : resolvedAttentionUrl
-          ? 'issue'
-          : note.trim() ? status : 'pending';
+      const resolvedStatus: LectureStatus = status;
       const lecture: LectureReport = {
         lectureId,
         note: legacyFileUrl ? '' : note,
@@ -447,6 +447,7 @@ export default function App() {
         teacherReportStatus: previousLecture?.teacherReportStatus,
         fileUrl: resolvedDoneUrl || resolvedAttentionUrl,
         attentionFileUrl: resolvedAttentionUrl || undefined,
+        attentionDate: attentionDate || previousLecture?.attentionDate || undefined,
         doneFileUrl: resolvedDoneUrl || undefined,
         timestamp: (note.trim() || resolvedAttentionUrl || resolvedDoneUrl) ? 'Just updated' : undefined,
       };
