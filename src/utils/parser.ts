@@ -273,6 +273,9 @@ function getReportColumnIndexes(headers: string[], start: number, groupWidth: nu
   report?: number;
   sentDate?: number;
   teacherReportStatus?: number;
+  lectureStatus?: number;
+  attentionFileUrl?: number;
+  doneFileUrl?: number;
   fileUrl?: number;
 } {
   const result: {
@@ -282,6 +285,9 @@ function getReportColumnIndexes(headers: string[], start: number, groupWidth: nu
     report?: number;
     sentDate?: number;
     teacherReportStatus?: number;
+    lectureStatus?: number;
+    attentionFileUrl?: number;
+    doneFileUrl?: number;
     fileUrl?: number;
   } = { lecture: start };
 
@@ -295,19 +301,26 @@ function getReportColumnIndexes(headers: string[], start: number, groupWidth: nu
       result.grade = index;
     } else if (header === 'report') {
       result.report = index;
+    } else if (header.includes('attention') && (header.includes('file') || header.includes('url') || header.includes('link'))) {
+      result.attentionFileUrl = index;
+    } else if ((header === 'done' || header.includes('done file') || header.includes('done url') || header.includes('completed file')) && (header === 'done' || header.includes('file') || header.includes('url'))) {
+      result.doneFileUrl = index;
+    } else if (header === 'lecture status' || header === 'status' || header === 'state' || header === 'حالة الحصة') {
+      result.lectureStatus = index;
     } else if (['file url', 'file link', 'report url', 'url', 'link'].includes(header)) {
       result.fileUrl = index;
     } else if (header.includes('date') || header.includes('sent')) {
       result.sentDate = index;
     } else if (
-      header.includes('status') ||
-      header.includes('state') ||
+      header.includes('teacher report status') ||
       header.includes('conversation') ||
       header.includes('approval') ||
       header.includes('response') ||
       header.includes('feedback') ||
       header.includes('confirm')
     ) {
+      result.teacherReportStatus = index;
+    } else if (header.includes('status') || header.includes('state')) {
       result.teacherReportStatus = index;
     }
   }
@@ -354,9 +367,10 @@ function parseTeacherReportStatus(value: string): TeacherReportStatus | undefine
   return undefined;
 }
 
-function parseReportLectureStatus(value: string, hasReport: boolean): LectureStatus {
+function parseReportLectureStatus(value: string, hasReport: boolean, hasAttentionFile = false, hasDoneFile = false): LectureStatus {
   const normalized = value.trim().toLowerCase();
-  if (/^(attention|attn|issue|requires attention|needs attention|متابعة|مشكلة)$/.test(normalized)) {
+  if (hasDoneFile) return 'completed';
+  if (hasAttentionFile || /^(attention|attn|issue|requires attention|needs attention|متابعة|مشكلة)$/.test(normalized)) {
     return 'issue';
   }
   return hasReport ? 'completed' : 'pending';
@@ -423,23 +437,30 @@ function parseTeacherGradeReportSheet(rows: string[][], groupWidth: number): {
       const reportValue = row[columnIndexes.report]?.trim() || '';
       const reportUrl = getGoogleDrivePreviewUrl(reportValue) ? reportValue : '';
       const note = reportUrl ? '' : reportValue;
-      const fileUrl = reportUrl || (columnIndexes.fileUrl === undefined ? '' : row[columnIndexes.fileUrl]?.trim() || '');
-      const sentDate = columnIndexes.sentDate === undefined
-        ? undefined
-        : row[columnIndexes.sentDate]?.trim() || undefined;
+      const extraFileUrl = columnIndexes.fileUrl === undefined ? '' : row[columnIndexes.fileUrl]?.trim() || '';
+      const attentionFileUrl = columnIndexes.attentionFileUrl === undefined ? '' : row[columnIndexes.attentionFileUrl]?.trim() || '';
+      const doneFileUrl = columnIndexes.doneFileUrl === undefined ? '' : row[columnIndexes.doneFileUrl]?.trim() || '';
+      const rawFileUrl = reportUrl || extraFileUrl;
+      const lectureStatusValue = columnIndexes.lectureStatus === undefined
+        ? ''
+        : row[columnIndexes.lectureStatus]?.trim() || '';
       const teacherReportStatus = columnIndexes.teacherReportStatus === undefined
         ? ''
         : row[columnIndexes.teacherReportStatus] || '';
+      const inferredAttentionUrl = attentionFileUrl || (rawFileUrl && /^(attention|attn|issue|requires attention|needs attention|متابعة|مشكلة)$/i.test(lectureStatusValue) ? rawFileUrl : '');
+      const inferredDoneUrl = doneFileUrl || (rawFileUrl && !inferredAttentionUrl ? rawFileUrl : '');
       course.lectures[lectureId] = {
         lectureId,
         note,
-        status: parseReportLectureStatus(teacherReportStatus, Boolean(note || fileUrl)),
+        status: parseReportLectureStatus(lectureStatusValue, Boolean(note || rawFileUrl || attentionFileUrl || doneFileUrl), Boolean(inferredAttentionUrl), Boolean(inferredDoneUrl)),
         sentDate,
         teacherReportStatus: columnIndexes.teacherReportStatus === undefined
           ? undefined
           : parseTeacherReportStatus(teacherReportStatus),
-        fileUrl: fileUrl || undefined,
-        timestamp: note ? 'Recently submitted' : undefined,
+        fileUrl: inferredDoneUrl || inferredAttentionUrl || undefined,
+        attentionFileUrl: inferredAttentionUrl || undefined,
+        doneFileUrl: inferredDoneUrl || undefined,
+        timestamp: note || inferredAttentionUrl || inferredDoneUrl ? 'Recently submitted' : undefined,
       };
     }
   }
