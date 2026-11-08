@@ -13,7 +13,9 @@ export interface LectureReport {
   status: LectureStatus;
   sentDate?: string;
   teacherReportStatus?: TeacherReportStatus;
-  fileUrl?: string;
+  fileUrl?: string; // Legacy single-file field
+  attentionFileUrl?: string;
+  doneFileUrl?: string;
   timestamp?: string;
   updatedBy?: string;
 }
