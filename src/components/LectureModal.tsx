@@ -15,6 +15,7 @@ interface LectureModalProps {
     note: string,
     status: LectureStatus,
     attentionFileUrl: string,
+    attentionDate: string,
     doneFileUrl: string
   ) => void;
 }
@@ -38,6 +39,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
   const [note, setNote] = useState('');
   const [status, setStatus] = useState<LectureStatus>('pending');
   const [attentionFileUrl, setAttentionFileUrl] = useState('');
+  const [attentionDate, setAttentionDate] = useState('');
   const [doneFileUrl, setDoneFileUrl] = useState('');
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
     setNote(existing?.note || '');
     setStatus(existing?.status || (existing?.note || legacyUrl ? 'completed' : 'pending'));
     setAttentionFileUrl(existing?.attentionFileUrl || (existing?.status === 'issue' ? legacyUrl : ''));
+    setAttentionDate(existing?.attentionDate || '');
     setDoneFileUrl(existing?.doneFileUrl || (existing?.status !== 'issue' ? legacyUrl : ''));
   }, [course, lectureId, isOpen]);
 
@@ -57,15 +60,16 @@ export const LectureModal: React.FC<LectureModalProps> = ({
   const attentionPreviewUrl = getPreviewUrl(attentionFileUrl);
   const donePreviewUrl = getPreviewUrl(doneFileUrl);
   const handleSave = () => {
-    onSaveLecture(course.id, lectureId, note.trim(), status, attentionFileUrl.trim(), doneFileUrl.trim());
+    onSaveLecture(course.id, lectureId, note.trim(), status, attentionFileUrl.trim(), attentionDate, doneFileUrl.trim());
     onClose();
   };
   const handleClear = () => {
     setNote('');
     setStatus('pending');
     setAttentionFileUrl('');
+    setAttentionDate('');
     setDoneFileUrl('');
-    onSaveLecture(course.id, lectureId, '', 'pending', '', '');
+    onSaveLecture(course.id, lectureId, '', 'pending', '', '', '');
     onClose();
   };
 
@@ -123,11 +127,13 @@ export const LectureModal: React.FC<LectureModalProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 space-y-2">
               <label className="block text-xs font-bold text-amber-900">Attention file URL</label>
-              <input type="url" value={attentionFileUrl} onChange={e => { setAttentionFileUrl(e.target.value); if (e.target.value.trim()) setStatus('issue'); }} placeholder="Paste the file / HTML page link" className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-300" />
+              <input type="url" value={attentionFileUrl} onChange={e => setAttentionFileUrl(e.target.value)} placeholder="Paste the Attention file link" className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-300" />
+              <label className="block text-[11px] font-semibold text-amber-800">Attention recorded date</label>
+              <input type="date" value={attentionDate} onChange={e => setAttentionDate(e.target.value)} className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-300" />
             </div>
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 space-y-2">
               <label className="block text-xs font-bold text-emerald-900">Done file URL</label>
-              <input type="url" value={doneFileUrl} onChange={e => { setDoneFileUrl(e.target.value); if (e.target.value.trim()) setStatus('completed'); }} placeholder="Paste the completed file / HTML page link" className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-300" />
+              <input type="url" value={doneFileUrl} onChange={e => setDoneFileUrl(e.target.value)} placeholder="Done report URL (from Google Sheet)" className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-300" />
             </div>
           </div>
 
@@ -141,15 +147,9 @@ export const LectureModal: React.FC<LectureModalProps> = ({
             <div className="grid grid-cols-3 gap-2">
               <button type="button" onClick={() => setStatus('completed')} className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${status === 'completed' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}><CheckCircle2 className="w-3.5 h-3.5" /><span>Done / تمام</span></button>
               <button type="button" onClick={() => setStatus('pending')} className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${status === 'pending' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}><Clock className="w-3.5 h-3.5" /><span>Pending</span></button>
-              <button type="button" onClick={() => {
-                if (doneFileUrl.trim() && !attentionFileUrl.trim()) {
-                  setAttentionFileUrl(doneFileUrl);
-                  setDoneFileUrl('');
-                }
-                setStatus('issue');
-              }} className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${status === 'issue' ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}><AlertTriangle className="w-3.5 h-3.5" /><span>Attention</span></button>
+              <button type="button" onClick={() => setStatus('issue')} className={`py-2 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-1.5 transition cursor-pointer ${status === 'issue' ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}><AlertTriangle className="w-3.5 h-3.5" /><span>Attention</span></button>
             </div>
-            <p className="mt-1.5 text-[11px] text-slate-500">When both files are present, the lecture is marked Done while both previews remain available.</p>
+            <p className="mt-1.5 text-[11px] text-slate-500">Uploading a Done report from the sheet does not change your manually selected lecture status.</p>
           </div>
 
           <div>
