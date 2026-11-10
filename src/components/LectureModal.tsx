@@ -55,15 +55,42 @@ const isHtmlLink = (url: string): boolean => {
   }
 };
 
+const APPS_SCRIPT_PREVIEW_URL = 'https://script.google.com/macros/s/AKfycbw7GEaNZ4HB83k367z3vd2uNkU61Qk6PuZm_p8wn_EoVkYpr-ovrwIVW-6a6CrkSIklLQ/exec';
+
+const getDriveFileId = (rawUrl: string): string | null => {
+  try {
+    const parsed = new URL(rawUrl.trim());
+    if (
+      parsed.protocol !== 'https:' ||
+      (parsed.hostname !== 'drive.google.com' && parsed.hostname !== 'docs.google.com')
+    ) {
+      return null;
+    }
+
+    return (
+      parsed.pathname.match(/\\/d\\/([^/]+)/)?.[1] ||
+      parsed.searchParams.get('id')
+    );
+  } catch {
+    return null;
+  }
+};
+
 const getPreviewUrl = (url: string): string => {
   const trimmed = url.trim();
   if (!trimmed) return '';
 
-  // Keep the existing Google Drive preview for PDFs, images, and other files.
-  // Only links that explicitly point to an HTML file use the HTML renderer.
+  // Google Drive files are routed through Apps Script, which detects the
+  // actual MIME type: HTML is rendered as a page; other files use Drive preview.
+  const driveFileId = getDriveFileId(trimmed);
+  if (driveFileId) {
+    return `${APPS_SCRIPT_PREVIEW_URL}?id=${encodeURIComponent(driveFileId)}`;
+  }
+
+  // Keep support for HTML files hosted outside Google Drive.
   if (isHtmlLink(trimmed)) return normalizeHtmlPreviewUrl(trimmed);
 
-  return getGoogleDrivePreviewUrl(trimmed) || trimmed;
+  return trimmed;
 };
 
 export const LectureModal: React.FC<LectureModalProps> = ({
