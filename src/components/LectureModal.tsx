@@ -184,9 +184,10 @@ export const LectureModal: React.FC<LectureModalProps> = ({
         </div>
 
         <div className="p-4 sm:p-5 space-y-4 min-h-0 overflow-y-auto">
-          {(lectureReport?.sentDate || lectureReport?.teacherReportStatus) && (
+          {(lectureReport?.attentionDate || lectureReport?.sentDate || lectureReport?.teacherReportStatus) && (
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900">
-              {lectureReport?.sentDate && <span className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 font-semibold text-sky-800"><Clock className="h-3.5 w-3.5" />Report sent {lectureReport.sentDate}</span>}
+              {lectureReport?.attentionDate && <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 font-semibold text-amber-800"><Clock className="h-3.5 w-3.5" />Attention date: {lectureReport.attentionDate}</span>}
+              {lectureReport?.sentDate && <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 font-semibold text-emerald-800"><Clock className="h-3.5 w-3.5" />Done date: {lectureReport.sentDate}</span>}
               {lectureReport?.teacherReportStatus && <span className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-semibold border-slate-200 bg-white text-slate-700"><MessageSquare className="h-3.5 w-3.5" />{TEACHER_REPORT_STATUS_LABELS[lectureReport.teacherReportStatus]}</span>}
             </div>
           )}
