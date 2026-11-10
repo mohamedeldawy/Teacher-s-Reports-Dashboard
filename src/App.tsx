@@ -94,9 +94,13 @@ function mergeLocalLectureEdits(
         const latestDoneFileUrl = latestLecture.doneFileUrl || (
           latestLecture.status === 'completed' ? latestLecture.fileUrl : undefined
         );
-        const attentionFileUrl = localEdit.attentionFileUrl || (
+        const latestAttentionFileUrl = latestLecture.attentionFileUrl || (
+          latestLecture.status === 'issue' ? latestLecture.fileUrl : undefined
+        );
+        const localAttentionFileUrl = localEdit.attentionFileUrl || (
           localEdit.status === 'issue' ? localEdit.fileUrl : undefined
         );
+        const attentionFileUrl = latestAttentionFileUrl || localAttentionFileUrl;
         lectures[lectureId] = {
           ...localEdit,
           doneFileUrl: latestDoneFileUrl || localEdit.doneFileUrl,
