@@ -19,6 +19,7 @@ import {
   hasLectureReport,
   parseSpreadsheet,
   parseSpreadsheetTabs,
+  mergeAttentionSheet,
   exportCoursesToCsv,
 } from './utils/parser';
 import { GOOGLE_SHEET_ID, INITIAL_SPREADSHEETS } from './data/initialData';
@@ -125,7 +126,8 @@ function mergeLocalLectureEdits(
 }
 
 async function fetchCurrentSheetTabs(): Promise<Array<{ name: string; csv: string }>> {
-  return Promise.all(INITIAL_SPREADSHEETS.map(async ({ name }) => {
+  const sheetNames = [...INITIAL_SPREADSHEETS.map(sheet => sheet.name), 'Attention'];
+  return Promise.all(sheetNames.map(async name => {
     const url = new URL(`https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq`);
     url.searchParams.set('tqx', 'out:csv');
     url.searchParams.set('sheet', name);
@@ -136,6 +138,16 @@ async function fetchCurrentSheetTabs(): Promise<Array<{ name: string; csv: strin
     }
     return { name, csv: await response.text() };
   }));
+}
+
+function parseCurrentSheetTabs(tabs: Array<{ name: string; csv: string }>) {
+  const subjectTabs = tabs.filter(tab => tab.name.trim().toLowerCase() !== 'attention');
+  const attentionTab = tabs.find(tab => tab.name.trim().toLowerCase() === 'attention');
+  const parsed = parseSpreadsheetTabs(subjectTabs);
+  return {
+    ...parsed,
+    courses: attentionTab ? mergeAttentionSheet(parsed.courses, attentionTab.csv) : parsed.courses,
+  };
 }
 
 export default function App() {
@@ -235,7 +247,7 @@ export default function App() {
 
       try {
         const tabs = await fetchCurrentSheetTabs();
-        const latest = parseSpreadsheetTabs(tabs);
+        const latest = parseCurrentSheetTabs(tabs);
         if (latest.courses.length === 0) {
           throw new Error('No teacher sections were found in the Google Sheet.');
         }
@@ -527,7 +539,7 @@ export default function App() {
     setIsRefreshingSheet(true);
     try {
       const tabs = await fetchCurrentSheetTabs();
-      const parsed = parseSpreadsheetTabs(tabs);
+      const parsed = parseCurrentSheetTabs(tabs);
       if (parsed.courses.length === 0) {
         throw new Error('No teacher sections were found in the Google Sheet.');
       }
