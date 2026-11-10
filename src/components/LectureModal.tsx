@@ -20,38 +20,26 @@ interface LectureModalProps {
   ) => void;
 }
 
-const normalizeHtmlPreviewUrl = (rawUrl: string): string => {
-  const trimmed = rawUrl.trim();
-  if (!trimmed) return '';
+const GOOGLE_APPS_SCRIPT_PREVIEW_URL = 'https://script.google.com/macros/s/AKfycbyLahJS25Q3j9v4JfnoUzEirg7vYC9yQZ1tq4_0I4OSOZdvKceJxt7AgnGk8QoeVsdJ/exec';
 
+const getDriveFileId = (rawUrl: string): string | null => {
   try {
-    const parsed = new URL(trimmed);
-    const parts = parsed.pathname.split('/').filter(Boolean);
-
-    // GitHub's "blob" page displays source code. Use a renderer for HTML files instead.
-    if (parsed.hostname === 'github.com' && parts.length >= 5 && parts[2] === 'blob') {
-      const [, owner, repository, , ...filePath] = parts;
-      return `https://raw.githack.com/${owner}/${repository}/${parts[3]}/${filePath.join('/')}`;
-    }
-
-    // raw.githubusercontent.com serves HTML as plain text; raw.githack.com renders it.
-    if (parsed.hostname === 'raw.githubusercontent.com' && parts.length >= 4) {
-      const [owner, repository, branch, ...filePath] = parts;
-      return `https://raw.githack.com/${owner}/${repository}/${branch}/${filePath.join('/')}`;
-    }
+    const parsed = new URL(rawUrl.trim());
+    if (parsed.hostname !== 'drive.google.com' && parsed.hostname !== 'docs.google.com') return null;
+    return parsed.pathname.match(/\\/d\\/([^/]+)/)?.[1] || parsed.searchParams.get('id');
   } catch {
-    // Keep non-standard but validly stored links unchanged.
+    return null;
   }
-
-  return trimmed;
 };
 
 const isHtmlLink = (url: string): boolean => {
+  const fileId = getDriveFileId(url);
+  if (fileId) return true; // Apps Script checks the actual Drive MIME type.
   try {
     const parsed = new URL(url.trim());
-    return /\.html?$/i.test(decodeURIComponent(parsed.pathname));
+    return /\\.html?$/i.test(decodeURIComponent(parsed.pathname));
   } catch {
-    return /\.html?(?:$|[?#])/i.test(url.trim());
+    return /\\.html?(?:$|[?#])/i.test(url.trim());
   }
 };
 
@@ -59,8 +47,10 @@ const getPreviewUrl = (url: string): string => {
   const trimmed = url.trim();
   if (!trimmed) return '';
 
-  // HTML must be loaded as a web page, not through the Google Drive document viewer.
-  if (isHtmlLink(trimmed)) return normalizeHtmlPreviewUrl(trimmed);
+  const driveFileId = getDriveFileId(trimmed);
+  if (driveFileId) {
+    return `${GOOGLE_APPS_SCRIPT_PREVIEW_URL}?id=${encodeURIComponent(driveFileId)}`;
+  }
 
   return getGoogleDrivePreviewUrl(trimmed) || trimmed;
 };
