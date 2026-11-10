@@ -62,7 +62,7 @@ const getPreviewUrl = (url: string): string => {
   try {
     const parsed = new URL(trimmed);
     if (parsed.hostname === 'drive.google.com' || parsed.hostname === 'docs.google.com') {
-      const fileId = parsed.pathname.match(/\\/d\\/([^/]+)/)?.[1] || parsed.searchParams.get('id');
+      const fileId = parsed.pathname.match(/\/d\/([^/]+)/)?.[1] || parsed.searchParams.get('id');
       if (fileId) {
         // The Apps Script renderer serves Drive HTML as a real page and redirects
         // other Drive file types to their normal Google Drive preview.
