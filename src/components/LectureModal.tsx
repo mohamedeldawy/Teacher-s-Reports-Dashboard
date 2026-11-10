@@ -146,7 +146,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
         <div className={`px-3 py-2 border-b flex flex-wrap items-center gap-2 text-xs font-semibold ${tone === 'attention' ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
           <FileText className="w-4 h-4" />
           {label}
-          {tone === 'attention' && lectureReport?.attentionDate && <span className="font-medium opacity-80">· {lectureReport.attentionDate}</span>}
+          {tone === 'attention' && lectureReport?.attentionDate && <span className="font-medium opacity-80">· Report date: {lectureReport.attentionDate}</span>}
           {tone === 'done' && lectureReport?.sentDate && <span className="font-medium opacity-80">· Report date: {lectureReport.sentDate}</span>}
           {isHtml && <span className="font-normal opacity-75">· HTML page</span>}
           <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1 hover:underline">
@@ -184,9 +184,8 @@ export const LectureModal: React.FC<LectureModalProps> = ({
         </div>
 
         <div className="p-4 sm:p-5 space-y-4 min-h-0 overflow-y-auto">
-          {(lectureReport?.sentDate || lectureReport?.attentionDate || lectureReport?.teacherReportStatus) && (
+          {(lectureReport?.sentDate || lectureReport?.teacherReportStatus) && (
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900">
-              {lectureReport?.attentionDate && <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 font-semibold text-amber-800"><AlertTriangle className="h-3.5 w-3.5" />Attention recorded {lectureReport.attentionDate}</span>}
               {lectureReport?.sentDate && <span className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 font-semibold text-sky-800"><Clock className="h-3.5 w-3.5" />Report sent {lectureReport.sentDate}</span>}
               {lectureReport?.teacherReportStatus && <span className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-semibold border-slate-200 bg-white text-slate-700"><MessageSquare className="h-3.5 w-3.5" />{TEACHER_REPORT_STATUS_LABELS[lectureReport.teacherReportStatus]}</span>}
             </div>
@@ -196,8 +195,7 @@ export const LectureModal: React.FC<LectureModalProps> = ({
             <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 space-y-2">
               <label className="block text-xs font-bold text-amber-900">Attention file URL</label>
               <input type="url" value={attentionFileUrl} onChange={e => setAttentionFileUrl(e.target.value)} placeholder="Paste the Attention file link" className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-300" />
-              <label className="block text-[11px] font-semibold text-amber-800">Attention recorded date</label>
-              <input type="date" value={attentionDate} onChange={e => setAttentionDate(e.target.value)} className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-300" />
+
             </div>
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 space-y-2">
               <label className="block text-xs font-bold text-emerald-900">Done file URL</label>
