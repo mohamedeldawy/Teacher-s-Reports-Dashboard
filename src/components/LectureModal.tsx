@@ -25,21 +25,20 @@ const GOOGLE_APPS_SCRIPT_PREVIEW_URL = 'https://script.google.com/macros/s/AKfyc
 const getDriveFileId = (rawUrl: string): string | null => {
   try {
     const parsed = new URL(rawUrl.trim());
-    if (parsed.hostname !== 'drive.google.com' && parsed.hostname !== 'docs.google.com') return null;
-    return parsed.pathname.match(/\\/d\\/([^/]+)/)?.[1] || parsed.searchParams.get('id');
+    if (!['drive.google.com', 'docs.google.com'].includes(parsed.hostname)) return null;
+    return parsed.pathname.match(/\/d\/([^/]+)/)?.[1] || parsed.searchParams.get('id');
   } catch {
     return null;
   }
 };
 
 const isHtmlLink = (url: string): boolean => {
-  const fileId = getDriveFileId(url);
-  if (fileId) return true; // Apps Script checks the actual Drive MIME type.
+  if (getDriveFileId(url)) return true;
   try {
     const parsed = new URL(url.trim());
-    return /\\.html?$/i.test(decodeURIComponent(parsed.pathname));
+    return /\.html?$/i.test(decodeURIComponent(parsed.pathname));
   } catch {
-    return /\\.html?(?:$|[?#])/i.test(url.trim());
+    return /\.html?(?:$|[?#])/i.test(url.trim());
   }
 };
 
@@ -83,8 +82,6 @@ export const LectureModal: React.FC<LectureModalProps> = ({
 
   const lectureReport = course.lectures[lectureId];
   const isNoteArabic = isArabic(note);
-  const attentionPreviewUrl = getPreviewUrl(attentionFileUrl);
-  const donePreviewUrl = getPreviewUrl(doneFileUrl);
   const handleSave = () => {
     onSaveLecture(course.id, lectureId, note.trim(), status, attentionFileUrl.trim(), attentionDate, doneFileUrl.trim());
     onClose();
