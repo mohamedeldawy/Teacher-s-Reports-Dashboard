@@ -59,9 +59,21 @@ const getPreviewUrl = (url: string): string => {
   const trimmed = url.trim();
   if (!trimmed) return '';
 
-  // HTML must be loaded as a web page, not through the Google Drive document viewer.
-  if (isHtmlLink(trimmed)) return normalizeHtmlPreviewUrl(trimmed);
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.hostname === 'drive.google.com' || parsed.hostname === 'docs.google.com') {
+      const fileId = parsed.pathname.match(/\\/d\\/([^/]+)/)?.[1] || parsed.searchParams.get('id');
+      if (fileId) {
+        // The Apps Script renderer serves Drive HTML as a real page and redirects
+        // other Drive file types to their normal Google Drive preview.
+        return `https://script.google.com/macros/s/AKfycbyLahJS25Q3j9v4JfnoUzEirg7vYC9yQZ1tq4_0I4OSOZdvKceJxt7AgnGk8QoeVsdJ/exec?id=${encodeURIComponent(fileId)}`;
+      }
+    }
+  } catch {
+    // Fall back to the existing preview behavior for non-standard URLs.
+  }
 
+  if (isHtmlLink(trimmed)) return normalizeHtmlPreviewUrl(trimmed);
   return getGoogleDrivePreviewUrl(trimmed) || trimmed;
 };
 
