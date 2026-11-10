@@ -659,6 +659,76 @@ export function parseSpreadsheetTabs(
   return { courses, allLectureIds };
 }
 
+
+/**
+ * Applies the shared Attention tab to the matching teacher/grade/lecture.
+ * Expected columns: Lectures, Teacher, Grade, Date, Report Note, Attention file URL.
+ */
+export function mergeAttentionSheet(
+  courses: TeacherCourse[],
+  csvRaw: string
+): TeacherCourse[] {
+  const rows = csvRaw.split(/\r?\n/).filter(line => line.trim()).map(parseCsvLine);
+  if (rows.length < 2) return courses;
+
+  const headers = rows[0].map(value => value.trim().toLowerCase());
+  const column = (name: string) => headers.indexOf(name.toLowerCase());
+  const lectureIndex = column('lectures');
+  const teacherIndex = column('teacher');
+  const gradeIndex = column('grade');
+  const dateIndex = column('date');
+  const noteIndex = column('report note');
+  const fileIndex = column('attention file url');
+
+  if ([lectureIndex, teacherIndex, gradeIndex, dateIndex, noteIndex, fileIndex].some(index => index < 0)) {
+    throw new Error('Attention tab headers must be: Lectures, Teacher, Grade, Date, Report Note, Attention file URL.');
+  }
+
+  const attentionRows = new Map<string, { date?: string; note: string; fileUrl?: string }>();
+  for (const row of rows.slice(1)) {
+    const rawLecture = row[lectureIndex]?.trim() || '';
+    const teacher = row[teacherIndex]?.trim().toLowerCase() || '';
+    const grade = row[gradeIndex]?.trim().toLowerCase() || '';
+    if (!rawLecture || !teacher || !grade) continue;
+    const lectureId = normalizeLectureId(rawLecture);
+    attentionRows.set(`${teacher}::${grade}::${lectureId.toLowerCase()}`, {
+      date: row[dateIndex]?.trim() || undefined,
+      note: row[noteIndex]?.trim() || '',
+      fileUrl: row[fileIndex]?.trim() || undefined,
+    });
+  }
+
+  return courses.map(course => {
+    const lectures = { ...course.lectures };
+    let changed = false;
+    Object.entries(lectures).forEach(([lectureId, lecture]) => {
+      const key = `${course.rawHeader.trim().toLowerCase()}::${course.grade.trim().toLowerCase()}::${lectureId.toLowerCase()}`;
+      const attention = attentionRows.get(key);
+      if (!attention) return;
+      changed = true;
+      lectures[lectureId] = {
+        ...lecture,
+        note: attention.note || lecture.note,
+        status: 'issue',
+        attentionDate: attention.date,
+        attentionFileUrl: attention.fileUrl,
+        fileUrl: attention.fileUrl || lecture.doneFileUrl || lecture.fileUrl,
+      };
+    });
+    if (!changed) return course;
+
+    const lectureEntries = Object.values(lectures);
+    const completed = lectureEntries.filter(lecture => lecture.status === 'completed' && hasLectureReport(lecture)).length;
+    return {
+      ...course,
+      lectures,
+      totalLectures: lectureEntries.length,
+      completedLectures: completed,
+      completionRate: lectureEntries.length ? Math.round((completed / lectureEntries.length) * 100) : 0,
+    };
+  });
+}
+
 /**
  * Exports courses to CSV format matching the spreadsheet
  */
