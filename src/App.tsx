@@ -101,7 +101,8 @@ function mergeLocalLectureEdits(
           ...localEdit,
           doneFileUrl: latestDoneFileUrl || localEdit.doneFileUrl,
           attentionFileUrl,
-          attentionDate: localEdit.attentionDate,
+          // Prefer the latest Attention date from the Google Sheet, while retaining a local date if the sheet has none.
+          attentionDate: latestLecture.attentionDate || localEdit.attentionDate,
           fileUrl: latestDoneFileUrl || attentionFileUrl || localEdit.fileUrl,
           // Keep the dashboard's manually selected status; a sheet report alone is not a status change.
           status: localEdit.status,
