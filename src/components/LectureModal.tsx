@@ -20,20 +20,33 @@ interface LectureModalProps {
   ) => void;
 }
 
-const GOOGLE_APPS_SCRIPT_PREVIEW_URL = 'https://script.google.com/macros/s/AKfycbyLahJS25Q3j9v4JfnoUzEirg7vYC9yQZ1tq4_0I4OSOZdvKceJxt7AgnGk8QoeVsdJ/exec';
+const normalizeHtmlPreviewUrl = (rawUrl: string): string => {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return '';
 
-const getDriveFileId = (rawUrl: string): string | null => {
   try {
-    const parsed = new URL(rawUrl.trim());
-    if (!['drive.google.com', 'docs.google.com'].includes(parsed.hostname)) return null;
-    return parsed.pathname.match(/\/d\/([^/]+)/)?.[1] || parsed.searchParams.get('id');
+    const parsed = new URL(trimmed);
+    const parts = parsed.pathname.split('/').filter(Boolean);
+
+    // GitHub's "blob" page displays source code. Use a renderer for HTML files instead.
+    if (parsed.hostname === 'github.com' && parts.length >= 5 && parts[2] === 'blob') {
+      const [, owner, repository, , ...filePath] = parts;
+      return `https://raw.githack.com/${owner}/${repository}/${parts[3]}/${filePath.join('/')}`;
+    }
+
+    // raw.githubusercontent.com serves HTML as plain text; raw.githack.com renders it.
+    if (parsed.hostname === 'raw.githubusercontent.com' && parts.length >= 4) {
+      const [owner, repository, branch, ...filePath] = parts;
+      return `https://raw.githack.com/${owner}/${repository}/${branch}/${filePath.join('/')}`;
+    }
   } catch {
-    return null;
+    // Keep non-standard but validly stored links unchanged.
   }
+
+  return trimmed;
 };
 
 const isHtmlLink = (url: string): boolean => {
-  if (getDriveFileId(url)) return true;
   try {
     const parsed = new URL(url.trim());
     return /\.html?$/i.test(decodeURIComponent(parsed.pathname));
@@ -46,10 +59,8 @@ const getPreviewUrl = (url: string): string => {
   const trimmed = url.trim();
   if (!trimmed) return '';
 
-  const driveFileId = getDriveFileId(trimmed);
-  if (driveFileId) {
-    return `${GOOGLE_APPS_SCRIPT_PREVIEW_URL}?id=${encodeURIComponent(driveFileId)}`;
-  }
+  // HTML must be loaded as a web page, not through the Google Drive document viewer.
+  if (isHtmlLink(trimmed)) return normalizeHtmlPreviewUrl(trimmed);
 
   return getGoogleDrivePreviewUrl(trimmed) || trimmed;
 };
@@ -82,6 +93,8 @@ export const LectureModal: React.FC<LectureModalProps> = ({
 
   const lectureReport = course.lectures[lectureId];
   const isNoteArabic = isArabic(note);
+  const attentionPreviewUrl = getPreviewUrl(attentionFileUrl);
+  const donePreviewUrl = getPreviewUrl(doneFileUrl);
   const handleSave = () => {
     onSaveLecture(course.id, lectureId, note.trim(), status, attentionFileUrl.trim(), attentionDate, doneFileUrl.trim());
     onClose();
