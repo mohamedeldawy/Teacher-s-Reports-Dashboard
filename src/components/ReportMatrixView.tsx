@@ -167,7 +167,8 @@ export const ReportMatrixView: React.FC<ReportMatrixViewProps> = ({
                         ? 'bg-amber-100 text-amber-900 border-amber-200'
                         : 'bg-rose-100 text-rose-800 border-rose-200';
                     const reportMetadata = [
-                      lectureReport?.sentDate && `Sent: ${lectureReport.sentDate}`,
+                      lectureReport?.attentionDate && `Attention: ${lectureReport.attentionDate}`,
+                      lectureReport?.sentDate && `Done: ${lectureReport.sentDate}`,
                       teacherResponse,
                     ].filter(Boolean).join(' | ');
 
