@@ -68,7 +68,7 @@ const getDriveFileId = (rawUrl: string): string | null => {
     }
 
     return (
-      parsed.pathname.match(/\\/d\\/([^/]+)/)?.[1] ||
+      parsed.pathname.match(/\/d\/([^/]+)/)?.[1] ||
       parsed.searchParams.get('id')
     );
   } catch {
