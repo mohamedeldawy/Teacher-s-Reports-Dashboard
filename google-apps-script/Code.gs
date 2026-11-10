@@ -22,7 +22,11 @@ function doGet(e) {
     }
 
     if (file.getMimeType() !== MimeType.HTML && file.getMimeType() !== 'text/html') {
-      return errorPage('The selected Google Drive file is not an HTML file.');
+      // Keep PDFs and other Drive files working in the same preview iframe.
+      var drivePreview = 'https://drive.google.com/file/d/' + encodeURIComponent(fileId) + '/preview';
+      return HtmlService
+        .createHtmlOutput('<!doctype html><html><head><meta http-equiv="refresh" content="0;url=' + drivePreview + '"></head><body><a href="' + drivePreview + '">Open file</a></body></html>')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
     var html = file.getBlob().getDataAsString('UTF-8');
